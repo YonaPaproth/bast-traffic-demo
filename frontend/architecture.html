@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datenarchitektur-Vergleich — BASt Traffic Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #fff; color: #111; -webkit-font-smoothing: antialiased; }
+
+/* ── Layout ── */
+.page { max-width: 1200px; margin: 0 auto; padding: 48px 32px; }
+.section { margin-bottom: 64px; }
+h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.lead { font-size: 16px; color: #505050; line-height: 1.6; max-width: 680px; margin-top: 12px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 2px; margin-bottom: 12px; }
+.tag-purple { background: #f3e5ff; color: #A100FF; }
+.tag-blue   { background: #e5f0ff; color: #0050D0; }
+.tag-green  { background: #e5f5ee; color: #007040; }
+.tag-orange { background: #fff3e5; color: #C05000; }
+.tag-gray   { background: #f0f0f0; color: #505050; }
+
+/* ── Divider ── */
+.divider { height: 3px; width: 40px; background: #A100FF; margin-bottom: 16px; }
+
+/* ── Architecture Flow ── */
+.arch-flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; margin-top: 24px; }
+.arch-step { flex: 1; min-width: 130px; position: relative; }
+.arch-box {
+  background: #fff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 16px 14px;
+  height: 100%;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.arch-box:hover { border-color: #A100FF; box-shadow: 0 2px 12px rgba(161,0,255,0.10); }
+.arch-box .icon { font-size: 24px; margin-bottom: 8px; display: block; }
+.arch-box .label { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px; }
+.arch-box .sub { font-size: 11px; color: #707070; line-height: 1.4; }
+.arch-box .tech { margin-top: 8px; font-size: 10px; font-weight: 600; color: #A100FF; background: #f3e5ff; padding: 2px 7px; border-radius: 2px; display: inline-block; }
+.arch-arrow {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 6px; color: #bbb; font-size: 20px; flex-shrink: 0;
+  padding-top: 20px;
+}
+.arch-step.highlight .arch-box { border-color: #A100FF; background: #fdf5ff; }
+.arch-step.optional .arch-box { border-style: dashed; border-color: #C05000; }
+.arch-step.optional .arch-box .label { color: #C05000; }
+
+/* ── Comparison Grid ── */
+.compare-grid { display: grid; grid-template-columns: 200px repeat(3, 1fr); gap: 1px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-top: 24px; }
+.compare-grid > div { background: #fff; padding: 14px 16px; font-size: 13px; }
+.compare-header { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; background: #f7f7f7 !important; color: #505050; }
+.compare-header.accent { background: #fdf5ff !important; color: #A100FF; }
+.compare-row-label { font-weight: 600; color: #111; background: #fafafa !important; font-size: 12px; }
+.compare-val { color: #333; line-height: 1.5; }
+.compare-val.good { color: #007040; }
+.compare-val.warn { color: #C05000; }
+.compare-val.bad  { color: #CC0000; }
+.pip { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+.pip-green  { background: #3fb950; }
+.pip-yellow { background: #d29922; }
+.pip-red    { background: #f85149; }
+.pip-purple { background: #A100FF; }
+
+/* ── Layers ── */
+.layers { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.layer { border-radius: 6px; padding: 14px 20px; display: flex; align-items: center; gap: 16px; border: 1.5px solid transparent; }
+.layer-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; min-width: 90px; }
+.layer-desc  { font-size: 13px; color: #333; line-height: 1.5; }
+.layer-bronze { background: #fdf7f0; border-color: #d2a06e; }
+.layer-bronze .layer-label { color: #8B5A1A; }
+.layer-silver { background: #f5f5f8; border-color: #9090a8; }
+.layer-silver .layer-label { color: #404060; }
+.layer-gold   { background: #fffdf0; border-color: #d4af37; }
+.layer-gold   .layer-label { color: #8B7000; }
+.layer-platinum { background: #f0f7ff; border-color: #6090cc; }
+.layer-platinum .layer-label { color: #004080; }
+
+/* ── Option Box ── */
+.option-box { border: 2px dashed #C05000; border-radius: 8px; padding: 24px; margin-top: 16px; background: #fffbf5; }
+.option-box h3 { font-size: 16px; font-weight: 700; color: #C05000; margin-bottom: 8px; }
+.option-box p { font-size: 13px; color: #505050; line-height: 1.6; }
+
+/* ── Footer ── */
+footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; font-size: 12px; color: #909090; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 768px) {
+  .arch-flow { flex-direction: column; }
+  .arch-arrow { transform: rotate(90deg); padding: 4px 0; }
+  .compare-grid { grid-template-columns: 1fr; }
+  .compare-header:not(:first-child):not(.compare-row-label) { display: none; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="section">
+    <div style="margin-bottom:24px;">
+      <a href="index.html" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#A100FF;text-decoration:none;padding:6px 14px;border:1.5px solid #A100FF;border-radius:2px;" onmouseover="this.style.background='#f3e5ff'" onmouseout="this.style.background='transparent'">
+        ← Zum Dashboard
+      </a>
+    </div>
+    <div class="divider"></div>
+    <div class="tag tag-purple">Architekturvergleich</div>
+    <h1>Von SAP zu Insights:<br>Vier Wege, eine Entscheidung</h1>
+    <p class="lead">
+      Dieses Dokument vergleicht vier reale Datenpipeline-Architekturen für den Einsatz mit
+      strukturierten Betriebsdaten (z.B. BASt-Verkehrsdaten, SAP-Exporte). Von einfach/günstig
+      bis enterprise-grade — mit optionaler Palantir-Foundry-Schicht.
+    </p>
+  </div>
+
+  <!-- ── Arch 1: Demo (diese Seite) ── -->
+  <div class="section">
+    <div class="tag tag-purple">Option A · Diese Demo</div>
+    <h2>S3 + Iceberg + DuckDB + Static Frontend</h2>
+    <p class="lead">Serverlose Open-Source-Architektur. Kein Cluster, kein Lizenzmodell. Ideal für Prototypen, kleine Teams, analytische Einmalauswertungen.</p>
+
+    <div class="arch-flow">
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🏭</span>
+          <div class="label">Quelle</div>
+          <div class="sub">BASt Open Data<br>SAP-Export via SFTP</div>
+          <span class="tech">CSV / ZIP</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🪣</span>
+          <div class="label">AWS S3</div>
+          <div class="sub">Object Storage<br>Partitioned Parquet</div>
+          <span class="tech">S3 Standard</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">❄️</span>
+          <div class="label">Apache Iceberg</div>
+          <div class="sub">Table Format<br>ACID · Time Travel</div>
+          <span class="tech">PyIceberg v0.7</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🦆</span>
+          <div class="label">DuckDB</div>
+          <div class="sub">In-Process Analytics<br>SQL auf Parquet/S3</div>
+          <span class="tech">DuckDB 1.x</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">⚡</span>
+          <div class="label">FastAPI</div>
+          <div class="sub">REST Endpoints<br>JSON Aggregations</div>
+          <span class="tech">Python 3.11</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">📊</span>
+          <div class="label">Dashboard</div>
+          <div class="sub">React + Plotly<br>S3 Static Hosting</div>
+          <span class="tech">CDN-only</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Arch 2: SAP → AWS → Databricks ── -->
+  <div class="section">
+    <div class="tag tag-blue">Option B · Enterprise Data Lake</div>
+    <h2>SAP → S3 → Databricks Medallion → Power BI</h2>
+    <p class="lead">Standard-Enterprise-Architektur. Skalierbar auf Petabyte-Niveau, starke Governance, volle SAP-Integration. Höchste Betriebskosten.</p>
+
+    <div class="arch-flow">
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🏢</span>
+          <div class="label">SAP</div>
+          <div class="sub">ERP / BW<br>SFTP Export<br>ODP / CDS Views</div>
+          <span class="tech">SAP BTP / SLT</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🪣</span>
+          <div class="label">AWS S3</div>
+          <div class="sub">Landing Zone<br>Raw Files<br>Versioniert</div>
+          <span class="tech">S3 + Lifecycle</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">🧱</span>
+          <div class="label">Databricks</div>
+          <div class="sub">Delta Lake<br>Medallion Layer</div>
+          <span class="tech">Spark + Unity Cat.</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">📈</span>
+          <div class="label">Power BI</div>
+          <div class="sub">DirectQuery<br>Dashboards<br>Self-Service</div>
+          <span class="tech">Premium / Fabric</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medallion Layers -->
+    <div style="margin-top: 28px;">
+      <div class="tag tag-blue">Databricks Medallion Layer</div>
+      <div class="layers">
+        <div class="layer layer-bronze">
+          <div class="layer-label">🥉 Bronze</div>
+          <div class="layer-desc"><strong>Raw Ingest:</strong> Rohdaten 1:1 aus SAP (CSV/Parquet), keine Transformation. Vollständige Quelltreue, Audit-Log. Schema-on-Read.</div>
+        </div>
+        <div class="layer layer-silver">
+          <div class="layer-label">🥈 Silver</div>
+          <div class="layer-desc"><strong>Cleansed:</strong> Dedupliziert, typisiert, gefiltert. PII-Masking. Delta-Format mit Z-Ordering. Join-ready für Analytics.</div>
+        </div>
+        <div class="layer layer-gold">
+          <div class="layer-label">🥇 Gold</div>
+          <div class="layer-desc"><strong>Business-Aggregate:</strong> KPIs, Dimensionsmodell (Star Schema), vorgekürzte Metriken. Optimiert für Power BI DirectQuery.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Arch 3: Microsoft Fabric ── -->
+  <div class="section">
+    <div class="tag tag-green">Option C · Microsoft Fabric</div>
+    <h2>SAP → Azure Data Factory → Fabric Lakehouse → Power BI</h2>
+    <p class="lead">Native Microsoft-Welt. Wenn Power BI bereits zentral genutzt wird, ist Fabric die "least resistance"-Integration. OneLake als einheitlicher Storage.</p>
+
+    <div class="arch-flow">
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🏢</span>
+          <div class="label">SAP</div>
+          <div class="sub">via ADF Connector<br>oder SFTP Drop</div>
+          <span class="tech">SAP BW / S/4</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🔄</span>
+          <div class="label">Azure Data Factory</div>
+          <div class="sub">Orchestration<br>Transformation<br>Scheduling</div>
+          <span class="tech">ADF / Synapse Pipelines</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">🏛️</span>
+          <div class="label">Fabric Lakehouse</div>
+          <div class="sub">OneLake (ADLS)<br>Delta Parquet<br>Notebook + SQL</div>
+          <span class="tech">Microsoft Fabric</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">📊</span>
+          <div class="label">Fabric Warehouse</div>
+          <div class="sub">SQL Endpoint<br>Semantic Model<br>Certified Datasets</div>
+          <span class="tech">T-SQL / DAX</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">📈</span>
+          <div class="label">Power BI</div>
+          <div class="sub">Native Integration<br>Auto-refresh<br>Row-Level Security</div>
+          <span class="tech">Fabric-nativ</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Palantir Option ── -->
+  <div class="section">
+    <div class="tag tag-orange">Option D · Palantir Foundry (Add-on)</div>
+    <h2>Palantir Foundry on top — wann sinnvoll?</h2>
+    <p class="lead">Palantir Foundry ist keine Alternative zu den Architekturen oben, sondern eine Schicht darüber. Es ersetzt Business-Intelligence durch operative Decision Intelligence.</p>
+
+    <div class="option-box">
+      <h3>⚠️ Wann Foundry, wann nicht?</h3>
+      <p>
+        Foundry macht Sinn, wenn <strong>operative Entscheidungen automatisiert</strong> werden sollen — 
+        z.B. „Welche Autobahnabschnitte sollen morgen gesperrt werden, basierend auf Echtzeit-Traffic + Wetter + Baustellen?"<br><br>
+        Es macht <strong>keinen Sinn</strong> als reine Dashboarding-Lösung (dafür ist es 10x zu teuer) oder wenn Power BI 
+        im Unternehmen bereits tief verankert ist.
+      </p>
+    </div>
+
+    <div class="arch-flow" style="margin-top: 24px;">
+      <div class="arch-step">
+        <div class="arch-box">
+          <span class="icon">🪣</span>
+          <div class="label">Bestehendes<br>Data Lake</div>
+          <div class="sub">S3 / ADLS<br>Iceberg / Delta</div>
+          <span class="tech">Option A, B oder C</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">🔌</span>
+          <div class="label">Foundry Connect</div>
+          <div class="sub">S3 Sync / JDBC<br>Raw Import</div>
+          <span class="tech">Magritte Connector</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">⚙️</span>
+          <div class="label">Foundry Pipeline</div>
+          <div class="sub">Code Repositories<br>Transform + ML</div>
+          <span class="tech">Python / Spark / SQL</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step highlight">
+        <div class="arch-box">
+          <span class="icon">🧠</span>
+          <div class="label">Ontology</div>
+          <div class="sub">Business Objects<br>Semantic Layer<br>Action Types</div>
+          <span class="tech">Foundry Ontology</span>
+        </div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-step optional">
+        <div class="arch-box">
+          <span class="icon">🖥️</span>
+          <div class="label">AIP / Workshop</div>
+          <div class="sub">Decision Apps<br>AI-Workflows<br>Operational UI</div>
+          <span class="tech">Palantir AIP</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Comparison Table ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-gray">Vergleich</div>
+    <h2>Architekturen auf einen Blick</h2>
+
+    <div class="compare-grid" style="margin-top: 24px;">
+      <!-- Header -->
+      <div class="compare-header"></div>
+      <div class="compare-header accent">A · Diese Demo<br><small style="font-weight:400">S3 + Iceberg + DuckDB</small></div>
+      <div class="compare-header">B · Databricks<br><small style="font-weight:400">SAP → S3 → Medallion → PBI</small></div>
+      <div class="compare-header">C · Microsoft Fabric<br><small style="font-weight:400">SAP → ADF → Fabric → PBI</small></div>
+
+      <!-- Rows -->
+      <div class="compare-row-label">Einstiegshürde</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Sehr niedrig — alles Open Source</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Mittel — Databricks-Know-how nötig</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Mittel — M365-Lizenz Voraussetzung</div>
+
+      <div class="compare-row-label">Kosten/Monat (Schätzung)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>~5–30 € (nur S3)</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>500–5.000 € (DBU-Kosten)</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Fabric F64: ~5.000 €/Monat</div>
+
+      <div class="compare-row-label">SAP-Integration</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Manuell (SFTP / Script)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Native Connectors (ADF, JDBC, ODP)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>ADF SAP Connector + OData</div>
+
+      <div class="compare-row-label">Skalierbarkeit</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Gut bis ~100 GB</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Petabyte-fähig (Spark)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Petabyte via OneLake</div>
+
+      <div class="compare-row-label">Data Governance</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Minimal (Iceberg-Metadata)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Unity Catalog (Lineage, ACL)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Purview-Integration</div>
+
+      <div class="compare-row-label">BI / Self-Service</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Custom Dashboard (kein Self-Service)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Power BI DirectQuery</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Power BI nativ integriert</div>
+
+      <div class="compare-row-label">Time Travel / Versioning</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Ja (Iceberg Snapshots)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Ja (Delta Lake)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Ja (Delta via OneLake)</div>
+
+      <div class="compare-row-label">Streaming / Real-Time</div>
+      <div class="compare-val bad"><span class="pip pip-red"></span>Nein (Batch only)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Ja (Spark Streaming / Kafka)</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Ja (Eventstream)</div>
+
+      <div class="compare-row-label">Palantir Foundry Add-on</div>
+      <div class="compare-val warn"><span class="pip pip-yellow"></span>Möglich via S3-Connector</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Gut — Delta als Input</div>
+      <div class="compare-val good"><span class="pip pip-green"></span>Möglich — ADLS-Connector</div>
+
+      <div class="compare-row-label">Empfehlung</div>
+      <div class="compare-val good">Proof of Concept,<br>Kleine Teams, Open Data</div>
+      <div class="compare-val">SAP-Konzerne mit<br>bestehenden AWS/Azure-Infra</div>
+      <div class="compare-val">M365-Unternehmen,<br>PBI bereits zentral genutzt</div>
+    </div>
+  </div>
+
+  <!-- ── Empfehlung ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-purple">Empfehlung</div>
+    <h2>Was würden wir bauen?</h2>
+    <p class="lead">Abhängig vom Kontext — aber die ehrliche Antwort:</p>
+
+    <div class="layers" style="margin-top: 20px;">
+      <div class="layer layer-bronze">
+        <div class="layer-label">Kurzfristig</div>
+        <div class="layer-desc"><strong>Option A (diese Demo)</strong> als PoC — in 1–2 Tagen zeigbar, keine Lizenzkosten, echter Datenbeweis. Reicht für Board-Präsentation.</div>
+      </div>
+      <div class="layer layer-silver">
+        <div class="layer-label">Mittelfristig</div>
+        <div class="layer-desc"><strong>Option C (Microsoft Fabric)</strong> wenn Power BI schon im Haus ist — geringste Zusatzlizenzierung, beste PBI-Integration, SAP-Connector out of the box.</div>
+      </div>
+      <div class="layer layer-gold">
+        <div class="layer-label">Skaliert</div>
+        <div class="layer-desc"><strong>Option B (Databricks)</strong> wenn Spark-Skills vorhanden und Multi-Cloud-Strategie existiert. Unity Catalog ist der beste Governance-Layer am Markt.</div>
+      </div>
+      <div class="layer layer-platinum">
+        <div class="layer-label">Palantir</div>
+        <div class="layer-desc"><strong>Palantir Foundry</strong> nur dann, wenn operative Entscheidungsunterstützung (AIP/Ontology) der Kern ist — nicht für Dashboards allein. ROI-Proof zuerst.</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>BASt Verkehrsdaten Demo · Architektur-Dokumentation · August 2026</span>
+    <span>Stack dieser Demo: PyIceberg · DuckDB · FastAPI · AWS S3 · Plotly · Tailwind CSS</span>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+duckdb
+pandas
+pyarrow
+pyproj

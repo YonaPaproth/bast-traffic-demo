@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+data/raw/
+data/cache/
+data/parquet/
+data/iceberg_local/
+data/iceberg_catalog.db
+.DS_Store
+*.log

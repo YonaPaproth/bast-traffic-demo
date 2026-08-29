@@ -9,3 +9,4 @@ data/iceberg_local/
 data/iceberg_catalog.db
 .DS_Store
 *.log
+data/DZ_2026_01.zip

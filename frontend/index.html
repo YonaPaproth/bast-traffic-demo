@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
  tailwind.config = {
@@ -250,7 +251,7 @@
  </select>
  </div>
  </div>
- <div id="chart-hourly" style="width:100%;"></div>
+ <div id="chart-hourly" style="width:100%;position:relative;height:320px;"><canvas id="canvas-hourly" style="width:100%;height:100%;"></canvas></div>
  </div>
  </div>
  </section>
@@ -460,68 +461,94 @@ async function loadStations() {
 }
 
 // ── Hourly profile ────────────────────────────────────
+let _hourlyChart = null;
+
 async function loadHourly(stationId) {
- document.getElementById('chart-hourly').innerHTML = `
- <div style="display:flex;align-items:center;justify-content:center;gap:10px;height:360px;color:#505050;font-size:13px;">
- <svg class="spinner" width="18" height="18" fill="none" viewBox="0 0 24 24">
- <circle style="opacity:.25" cx="12" cy="12" r="10" stroke="#A100FF" stroke-width="4"/>
- <path style="opacity:.75" fill="#A100FF" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
- </svg>
- Loading hourly data…
- </div>`;
+  const container = document.getElementById('chart-hourly');
+  container.innerHTML = `<canvas id="canvas-hourly" style="width:100%;height:100%;"></canvas>`;
 
- try {
- const r = await fetch(`${BASE}/hourly/${stationId}.json?v=2`);
- const d = await r.json();
+  try {
+    const r = await fetch(`${BASE}/hourly/${stationId}.json?t=${Date.now()}`);
+    const d = await r.json();
 
- // Pre-aggregated: already Mon-Fri averages, 24 rows max
- const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
- const avgPkw = Array(24).fill(0);
- const avgLkw = Array(24).fill(0);
- d.data.forEach(row => {
-   const h = row.h ?? row.hour ?? 0;
-   avgPkw[h] = row.pkw || 0;
-   avgLkw[h] = row.lkw || 0;
- });
- const peak = Math.max(...avgPkw, ...avgLkw, 1);
+    const labels = [];
+    const pkwData = [];
+    const lkwData = [];
 
- Plotly.newPlot('chart-hourly', [
- {
- x: hours, y: avgPkw,
- type: 'scatter', mode: 'lines+markers',
- name: 'PKW',
- line: { color: '#A100FF', width: 2.5, shape: 'spline' },
- marker: { color: '#A100FF', size: 5 },
- fill: 'tozeroy', fillcolor: 'rgba(161,0,255,0.06)',
- hovertemplate: '<b>%{x}</b> PKW: %{y:,.0f} (Mon–Fri avg)<extra></extra>',
- },
- {
- x: hours, y: avgLkw,
- type: 'scatter', mode: 'lines+markers',
- name: 'LKW',
- line: { color: '#d29922', width: 2, shape: 'spline', dash: 'dot' },
- marker: { color: '#d29922', size: 4 },
- hovertemplate: '<b>%{x}</b> LKW: %{y:,.0f} (Mon–Fri avg)<extra></extra>',
- }
- ], {
- ...LAYOUT_BASE,
- height: 320,
- margin: { t: 24, r: 24, b: 52, l: 72 },
- legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e0e0e0', borderwidth: 1, font: { size: 11 } },
- annotations: [
- { x: '08:00', y: peak, text: ' Morning peak', showarrow: false,
- yanchor: 'bottom', font: { size: 10, color: '#7B00CC' } },
- { x: '17:00', y: peak, text: ' Evening peak', showarrow: false,
- yanchor: 'bottom', font: { size: 10, color: '#7B00CC' } },
- ],
- xaxis: { ...LAYOUT_BASE.xaxis, title: { text: 'Time of day', font: { size: 11, color: '#505050' }, standoff: 10 } },
- yaxis: { ...LAYOUT_BASE.yaxis, rangemode: 'tozero', autorange: true, tickformat: ',d', nticks: 6, title: { text: 'Avg Vehicles/h (Mon–Fri)', font: { size: 11, color: '#505050' }, standoff: 10 } },
- }, { responsive: true, displayModeBar: false });
+    // Build sorted arrays h=0..23
+    const byH = {};
+    d.data.forEach(row => { byH[row.h] = row; });
+    for (let h = 0; h < 24; h++) {
+      labels.push(`${String(h).padStart(2,'0')}:00`);
+      pkwData.push(byH[h] ? byH[h].pkw : 0);
+      lkwData.push(byH[h] ? byH[h].lkw : 0);
+    }
 
- } catch {
- document.getElementById('chart-hourly').innerHTML =
- '<div style="display:flex;align-items:center;justify-content:center;height:360px;color:#505050;font-size:13px;">No hourly data available for this station</div>';
- }
+    if (_hourlyChart) { _hourlyChart.destroy(); _hourlyChart = null; }
+
+    const ctx = document.getElementById('canvas-hourly').getContext('2d');
+    _hourlyChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'PKW (cars)',
+            data: pkwData,
+            borderColor: '#A100FF',
+            backgroundColor: 'rgba(161,0,255,0.07)',
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointBackgroundColor: '#A100FF',
+            tension: 0.4,
+            fill: true,
+          },
+          {
+            label: 'LKW (trucks)',
+            data: lkwData,
+            borderColor: '#d29922',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 2,
+            pointBackgroundColor: '#d29922',
+            borderDash: [5, 3],
+            tension: 0.4,
+            fill: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: {
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: { font: { size: 10 }, color: '#707070', maxRotation: 45 }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: {
+              font: { size: 10 }, color: '#707070',
+              callback: v => v.toLocaleString('en')
+            },
+            title: { display: true, text: 'Avg Vehicles/h (Mon–Fri)', font: { size: 10 }, color: '#707070' }
+          }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 24, padding: 12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('en')}`
+            }
+          }
+        }
+      }
+    });
+  } catch(e) {
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No hourly data available</div>';
+  }
 }
 
 loadOverview().catch(console.error);

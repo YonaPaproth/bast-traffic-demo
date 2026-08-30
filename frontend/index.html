@@ -1,727 +1,635 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BASt Verkehr — Deutschland Januar 2026</title>
+<title>BASt Traffic — Germany, January 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        fontFamily: {
-          sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        },
-        colors: {
-          purple: {
-            DEFAULT: '#A100FF',
-            dark:    '#7B00CC',
-            darker:  '#4B0082',
-            light:   '#F3E5FF',
-            muted:   '#E8CCFF',
-          },
-        }
-      }
-    }
-  }
+ tailwind.config = {
+ theme: {
+ extend: {
+ fontFamily: {
+ sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+ },
+ colors: {
+ purple: {
+ DEFAULT: '#A100FF',
+ dark: '#7B00CC',
+ darker: '#4B0082',
+ light: '#F3E5FF',
+ muted: '#E8CCFF',
+ },
+ }
+ }
+ }
+ }
 </script>
 <style>
-  * { box-sizing: border-box; }
-  body {
-    background: #ffffff;
-    color: #000000;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  ::selection { background: #A100FF22; color: #000; }
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: #f7f7f7; }
-  ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
-  select option { background: #fff; color: #000; }
-  .kpi-value { font-variant-numeric: tabular-nums; }
-  .kpi-card {
-    background: #fff;
-    border-radius: 2px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    border-left: 4px solid #A100FF;
-    padding: 28px 28px 24px;
-    transition: box-shadow 0.15s;
-  }
-  .kpi-card:hover { box-shadow: 0 4px 16px rgba(161,0,255,0.10); }
-  .section-alt { background: #f7f7f7; }
-  .spinner { animation: spin 0.9s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .chart-container {
-    background: #fff;
-    border-radius: 2px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    overflow: hidden;
-  }
-  .chart-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #000;
-    letter-spacing: -0.01em;
-  }
-  .chart-subtitle {
-    font-size: 13px;
-    color: #505050;
-    margin-top: 2px;
-  }
-  .section-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #A100FF;
-  }
-  .badge-outline {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border: 1.5px solid #A100FF;
-    border-radius: 2px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #A100FF;
-    letter-spacing: 0.02em;
-  }
-  select.styled {
-    background: #fff;
-    border: 1px solid #d4d4d4;
-    border-radius: 2px;
-    color: #000;
-    font-size: 13px;
-    padding: 8px 32px 8px 12px;
-    appearance: none;
-    -webkit-appearance: none;
-    cursor: pointer;
-    transition: border-color 0.15s;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23505050' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-  }
-  select.styled:focus { outline: none; border-color: #A100FF; }
-  .arch-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border: 1px solid #e4e4e4;
-    border-radius: 2px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #505050;
-    background: #fff;
-  }
-  .arch-arrow { color: #d4d4d4; font-size: 16px; font-weight: 300; }
-  .iceberg-card {
-    background: #fff;
-    border: 1px solid #e8e8e8;
-    border-radius: 2px;
-    padding: 20px;
-  }
-  .feature-card {
-    background: #fff;
-    border: 1px solid #e8e8e8;
-    border-left: 3px solid #A100FF;
-    border-radius: 2px;
-    padding: 16px 20px;
-  }
-  .divider-purple {
-    height: 3px;
-    background: linear-gradient(to right, #A100FF, #7B00CC, #4B0082);
-    width: 48px;
-    margin-bottom: 12px;
-  }
+ * { box-sizing: border-box; }
+ body {
+ background: #ffffff;
+ color: #000000;
+ -webkit-font-smoothing: antialiased;
+ -moz-osx-font-smoothing: grayscale;
+ }
+ ::selection { background: #A100FF22; color: #000; }
+ ::-webkit-scrollbar { width: 5px; height: 5px; }
+ ::-webkit-scrollbar-track { background: #f7f7f7; }
+ ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+ select option { background: #fff; color: #000; }
+ .kpi-value { font-variant-numeric: tabular-nums; }
+ .kpi-card {
+ background: #fff;
+ border-radius: 2px;
+ box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+ border-left: 4px solid #A100FF;
+ padding: 28px 28px 24px;
+ transition: box-shadow 0.15s;
+ }
+ .kpi-card:hover { box-shadow: 0 4px 16px rgba(161,0,255,0.10); }
+ .section-alt { background: #f7f7f7; }
+ .spinner { animation: spin 0.9s linear infinite; }
+ @keyframes spin { to { transform: rotate(360deg); } }
+ .chart-container {
+ background: #fff;
+ border-radius: 2px;
+ box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+ overflow: hidden;
+ }
+ .chart-title {
+ font-size: 16px;
+ font-weight: 700;
+ color: #000;
+ letter-spacing: -0.01em;
+ }
+ .chart-subtitle {
+ font-size: 13px;
+ color: #505050;
+ margin-top: 2px;
+ }
+ .section-label {
+ font-size: 11px;
+ font-weight: 700;
+ letter-spacing: 0.1em;
+ text-transform: uppercase;
+ color: #A100FF;
+ }
+ .badge-outline {
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ padding: 4px 12px;
+ border: 1.5px solid #A100FF;
+ border-radius: 2px;
+ font-size: 12px;
+ font-weight: 600;
+ color: #A100FF;
+ letter-spacing: 0.02em;
+ }
+ select.styled {
+ background: #fff;
+ border: 1px solid #d4d4d4;
+ border-radius: 2px;
+ color: #000;
+ font-size: 13px;
+ padding: 8px 32px 8px 12px;
+ appearance: none;
+ -webkit-appearance: none;
+ cursor: pointer;
+ transition: border-color 0.15s;
+ background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23505050' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+ background-repeat: no-repeat;
+ background-position: right 10px center;
+ }
+ select.styled:focus { outline: none; border-color: #A100FF; }
+ .arch-pill {
+ display: inline-flex;
+ align-items: center;
+ gap: 6px;
+ padding: 6px 14px;
+ border: 1px solid #e4e4e4;
+ border-radius: 2px;
+ font-size: 12px;
+ font-weight: 500;
+ color: #505050;
+ background: #fff;
+ }
+ .arch-arrow { color: #d4d4d4; font-size: 16px; font-weight: 300; }
+ .divider-purple {
+ height: 3px;
+ background: linear-gradient(to right, #A100FF, #7B00CC, #4B0082);
+ width: 48px;
+ margin-bottom: 12px;
+ }
 </style>
 </head>
 <body class="min-h-screen font-sans">
 
-  <!-- ─── Header ─────────────────────────────────── -->
-  <header style="background:#fff;border-bottom:2px solid #A100FF;position:sticky;top:0;z-index:50;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px;">
-        <div style="display:flex;align-items:center;gap:16px;min-width:0;">
-          <!-- Purple accent mark -->
-          <div style="width:4px;height:36px;background:#A100FF;border-radius:0;flex-shrink:0;"></div>
-          <div>
-            <div style="font-size:20px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1.1;">BASt Verkehr</div>
-            <div style="font-size:12px;color:#505050;margin-top:1px;font-weight:400;">Bundesfernstraßen · Dauerzählstellen · Deutschland</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <a href="architecture.html" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#A100FF;text-decoration:none;padding:6px 14px;border:1.5px solid #A100FF;border-radius:2px;transition:background 0.15s;" onmouseover="this.style.background='#f3e5ff'" onmouseout="this.style.background='transparent'">
-            🏗️ Architektur
-          </a>
-          <span class="badge-outline">Open Data · Januar 2026</span>
-        </div>
-      </div>
-    </div>
-  </header>
+ <!-- ─── Header ─────────────────────────────────── -->
+ <header style="background:#fff;border-bottom:2px solid #A100FF;position:sticky;top:0;z-index:50;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 16px;">
+ <div style="display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:12px;flex-wrap:wrap;padding:10px 0;">
+ <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+ <div style="width:4px;height:32px;background:#A100FF;border-radius:0;flex-shrink:0;"></div>
+ <div style="min-width:0;">
+ <div style="font-size:18px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1.1;white-space:nowrap;">BASt Traffic</div>
+ <div style="font-size:11px;color:#505050;margin-top:1px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Federal Highways · Permanent Counting Stations · Germany</div>
+ </div>
+ </div>
+ <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+ <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/architecture.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#A100FF;text-decoration:none;padding:5px 10px;border:1.5px solid #A100FF;border-radius:2px;white-space:nowrap;" onmouseover="this.style.background='#f3e5ff'" onmouseout="this.style.background='transparent'">
+ ️ <span style="display:none;" class="nav-label">Architecture</span><span>Architecture</span>
+ </a>
+ <span class="badge-outline" style="white-space:nowrap;font-size:11px;">Open Data</span>
+ </div>
+ </div>
+ </div>
+ </header>
 
-  <!-- ─── KPI Section ─────────────────────────────── -->
-  <section style="background:#fff;padding:48px 0;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="margin-bottom:32px;">
-        <div class="divider-purple"></div>
-        <div class="section-label">Überblick Januar 2026</div>
-        <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Verkehrskennzahlen</h2>
-      </div>
-      <div id="kpi-section" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
-        <!-- Skeleton -->
-        <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
-          <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
-          <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
-          <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
-        </div>
-        <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
-          <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
-          <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
-          <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
-        </div>
-        <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
-          <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
-          <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
-          <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
-        </div>
-        <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
-          <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
-          <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
-          <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
-        </div>
-      </div>
-    </div>
-  </section>
+ <!-- ─── KPI Section ─────────────────────────────── -->
+ <section style="background:#fff;padding:48px 0;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:32px;">
+ <div class="divider-purple"></div>
+ <div class="section-label">Overview January 2026</div>
+ <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Traffic Statistics</h2>
+ </div>
+ <div id="kpi-section" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+ <!-- Skeleton -->
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-  <!-- ─── Daily Trend Section ─────────────────────── -->
-  <section class="section-alt" style="padding:48px 0;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="margin-bottom:32px;">
-        <div class="divider-purple"></div>
-        <div class="section-label">Zeitverlauf</div>
-        <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Tägliches Verkehrsaufkommen</h2>
-      </div>
-      <div class="chart-container">
-        <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
-          <div class="chart-title">Kfz / Tag — Summe aller Stationen</div>
-          <div class="chart-subtitle">Januar 2026 · Alle Dauerzählstellen</div>
-        </div>
-        <div id="chart-daily" style="width:100%;"></div>
-      </div>
-    </div>
-  </section>
+ <!-- ─── Daily Trend Section ─────────────────────── -->
+ <section class="section-alt" style="padding:48px 0;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:32px;">
+ <div class="divider-purple"></div>
+ <div class="section-label">Time Series</div>
+ <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Daily Traffic Volume</h2>
+ </div>
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+ <div class="chart-title">Vehicles / Day — All Stations</div>
+ <div class="chart-subtitle">January 2026 · All Permanent Counting Stations</div>
+ </div>
+ <div id="chart-daily" style="width:100%;"></div>
+ </div>
+ </div>
+ </section>
 
-  <!-- ─── Ranking & States ────────────────────────── -->
-  <section style="background:#fff;padding:48px 0;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="margin-bottom:32px;">
-        <div class="divider-purple"></div>
-        <div class="section-label">Ranking &amp; Verteilung</div>
-        <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Stationen &amp; Bundesländer</h2>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <div class="chart-container">
-          <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
-            <div class="chart-title">Top 10 Stationen</div>
-            <div class="chart-subtitle">Gesamtverkehr Januar 2026</div>
-          </div>
-          <div id="chart-top10" style="width:100%;"></div>
-        </div>
-        <div class="chart-container">
-          <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
-            <div class="chart-title">Verkehr nach Bundesland</div>
-            <div class="chart-subtitle">Anteil am Gesamtverkehr</div>
-          </div>
-          <div id="chart-states" style="width:100%;"></div>
-        </div>
-      </div>
-    </div>
-  </section>
+ <!-- ─── Ranking & States ────────────────────────── -->
+ <section style="background:#fff;padding:48px 0;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:32px;">
+ <div class="divider-purple"></div>
+ <div class="section-label">Ranking &amp; Distribution</div>
+ <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Stations &amp; Federal States</h2>
+ </div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+ <div class="chart-title">Top 10 Stations</div>
+ <div class="chart-subtitle">Total Traffic January 2026</div>
+ </div>
+ <div id="chart-top10" style="width:100%;"></div>
+ </div>
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+ <div class="chart-title">Traffic by Federal State</div>
+ <div class="chart-subtitle">Share of Total Traffic</div>
+ </div>
+ <div id="chart-states" style="width:100%;"></div>
+ </div>
+ </div>
+ </div>
+ </section>
 
-  <!-- ─── Hourly Profile ──────────────────────────── -->
-  <section class="section-alt" style="padding:48px 0;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="margin-bottom:32px;">
-        <div class="divider-purple"></div>
-        <div class="section-label">Stundenprofil</div>
-        <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Durchschnittlicher Tagesgang</h2>
-      </div>
-      <div class="chart-container">
-        <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-          <div>
-            <div class="chart-title">Stundenprofil nach Station</div>
-            <div class="chart-subtitle">Monatsmittel · Durchschnittlicher Tagesgang</div>
-          </div>
-          <div style="position:relative;min-width:280px;">
-            <select id="station-select" class="styled" style="width:100%;">
-              <option>Lade Stationen…</option>
-            </select>
-          </div>
-        </div>
-        <div id="chart-hourly" style="width:100%;"></div>
-      </div>
-    </div>
-  </section>
+ <!-- ─── Hourly Profile ──────────────────────────── -->
+ <section class="section-alt" style="padding:48px 0;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:32px;">
+ <div class="divider-purple"></div>
+ <div class="section-label">Hourly Profile</div>
+ <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Average Daily Pattern</h2>
+ </div>
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+ <div>
+ <div class="chart-title">Hourly Profile by Station</div>
+ <div class="chart-subtitle">Monthly Average · Average Daily Pattern</div>
+ </div>
+ <div style="position:relative;min-width:280px;">
+ <select id="station-select" class="styled" style="width:100%;">
+ <option>Loading stations…</option>
+ </select>
+ </div>
+ </div>
+ <div id="chart-hourly" style="width:100%;"></div>
+ </div>
+ </div>
+ </section>
 
-  <!-- ─── Map Section ───────────────────── -->
-  <section style="background:#f7f7f7;padding:48px 0;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="margin-bottom:24px;">
-        <div class="divider-purple"></div>
-        <div class="section-label">Zählstellen-Karte</div>
-        <div class="section-title">1.832 Dauerzählstellen — Deutschland</div>
-        <div style="font-size:14px;color:#505050;margin-top:8px;">
-          Größe und Farbe der Marker zeigen das Verkehrsaufkommen im Januar 2026. Hover für Details.
-        </div>
-      </div>
-      <div id="map-chart" style="border-radius:4px;overflow:hidden;border:1px solid #e0e0e0;background:#fff;">
-        <div style="padding:40px;text-align:center;color:#888;font-size:14px;">Lade Karte…</div>
-      </div>
-    </div>
-  </section>
+ <!-- ─── Map Section ───────────────────── -->
+ <section style="background:#f7f7f7;padding:48px 0;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:16px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+ <div>
+ <div class="divider-purple"></div>
+ <div class="section-label">Counting Station Map</div>
+ <div class="section-title">1,832 Permanent Counting Stations, Germany</div>
+ <div style="font-size:13px;color:#505050;margin-top:6px;">Marker size and color indicate traffic volume, January 2026.</div>
+ </div>
+ <button id="map-fullscreen-btn" onclick="toggleMapFullscreen()" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#A100FF;background:#fff;border:1.5px solid #A100FF;border-radius:2px;padding:6px 14px;cursor:pointer;white-space:nowrap;">
+ Fullscreen
+ </button>
+ </div>
+ <div id="map-chart" style="border-radius:4px;overflow:hidden;border:1px solid #e0e0e0;background:#fff;transition:all 0.2s;">
+ <div style="padding:40px;text-align:center;color:#888;font-size:14px;">Loading map…</div>
+ </div>
 
-  <!-- ─── Architecture Section ───────────────────── -->
-  <section style="background:#fff;padding:48px 0;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="margin-bottom:32px;">
-        <div class="divider-purple"></div>
-        <div class="section-label">Datenarchitektur</div>
-        <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Apache Iceberg ❄️ Data Lakehouse</h2>
-      </div>
+ <!-- Fullscreen overlay -->
+ <div id="map-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;flex-direction:column;">
+ <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:2px solid #A100FF;background:#fff;flex-shrink:0;">
+ <div style="font-size:14px;font-weight:700;color:#000;">️ Counting Station Map · 1,832 Stations</div>
+ <button onclick="toggleMapFullscreen()" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#A100FF;background:#fff;border:1.5px solid #A100FF;border-radius:2px;padding:6px 14px;cursor:pointer;">
+ Close
+ </button>
+ </div>
+ <div id="map-chart-fullscreen" style="flex:1;width:100%;"></div>
+ </div>
+ </div>
+ </section>
 
-      <!-- Pipeline -->
-      <div class="chart-container" style="margin-bottom:20px;">
-        <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
-          <div class="chart-title">Data Lakehouse Stack</div>
-          <div class="chart-subtitle">Parquet → Apache Iceberg v2 → DuckDB → FastAPI → Browser</div>
-        </div>
-        <div style="padding:28px;">
-          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:32px;">
-            <span class="arch-pill">📦 BASt Rohdaten</span>
-            <span class="arch-arrow">→</span>
-            <span class="arch-pill" style="border-color:#A100FF22;color:#A100FF;">☁️ AWS S3</span>
-            <span class="arch-arrow">→</span>
-            <span class="arch-pill" style="border-color:#A100FF33;color:#7B00CC;font-weight:600;">❄️ Apache Iceberg v2</span>
-            <span class="arch-arrow">→</span>
-            <span class="arch-pill" style="border-color:#A100FF22;color:#A100FF;">🦆 DuckDB</span>
-            <span class="arch-arrow">→</span>
-            <span class="arch-pill" style="border-color:#A100FF22;color:#A100FF;">⚡ FastAPI</span>
-            <span class="arch-arrow">→</span>
-            <span class="arch-pill" style="border-color:#A100FF33;background:#F3E5FF;color:#7B00CC;font-weight:600;">🌐 Browser</span>
-          </div>
-
-          <!-- Iceberg meta cards -->
-          <div id="iceberg-meta-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-            <div class="iceberg-card" style="animation:pulse 1.5s ease-in-out infinite;">
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:16px;"></div>
-              <div style="height:28px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:8px;"></div>
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:75%;"></div>
-            </div>
-            <div class="iceberg-card" style="animation:pulse 1.5s ease-in-out infinite;">
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:16px;"></div>
-              <div style="height:28px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:8px;"></div>
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:75%;"></div>
-            </div>
-            <div class="iceberg-card" style="animation:pulse 1.5s ease-in-out infinite;">
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:16px;"></div>
-              <div style="height:28px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:8px;"></div>
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:75%;"></div>
-            </div>
-            <div class="iceberg-card" style="animation:pulse 1.5s ease-in-out infinite;">
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:16px;"></div>
-              <div style="height:28px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:8px;"></div>
-              <div style="height:10px;background:#f0f0f0;border-radius:2px;width:75%;"></div>
-            </div>
-          </div>
-
-          <!-- Schema preview -->
-          <div id="iceberg-schema" style="margin-top:24px;display:none;">
-            <p style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#505050;margin-bottom:10px;">Table Schema</p>
-            <pre style="font-size:12px;font-family:'Fira Code','Cascadia Code',monospace;background:#f7f7f7;border:1px solid #e8e8e8;border-radius:2px;padding:16px;overflow:auto;max-height:200px;color:#505050;"></pre>
-          </div>
-
-          <!-- Feature cards -->
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px;">
-            <div class="feature-card">
-              <div style="font-size:13px;font-weight:700;color:#A100FF;margin-bottom:6px;">🔐 ACID Transactions</div>
-              <div style="font-size:13px;color:#505050;line-height:1.5;">Atomic appends, concurrent reads, no partial writes</div>
-            </div>
-            <div class="feature-card">
-              <div style="font-size:13px;font-weight:700;color:#A100FF;margin-bottom:6px;">📸 Time Travel</div>
-              <div style="font-size:13px;color:#505050;line-height:1.5;">Each snapshot is a point-in-time view of the full dataset</div>
-            </div>
-            <div class="feature-card">
-              <div style="font-size:13px;font-weight:700;color:#A100FF;margin-bottom:6px;">🔄 Schema Evolution</div>
-              <div style="font-size:13px;color:#505050;line-height:1.5;">Add columns without rewriting data; backward compatible</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ─── Footer ─────────────────────────────────── -->
-  <footer style="border-top:1px solid #e8e8e8;padding:32px 0 24px;background:#fff;">
-    <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
-        <div style="font-size:13px;color:#505050;">
-          Datenquelle: <strong style="color:#000;">Bundesanstalt für Straßenwesen (BASt)</strong> · Open Data · Januar 2026
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">AWS S3</span>
-          <span style="color:#d4d4d4;">→</span>
-          <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">❄️ Iceberg</span>
-          <span style="color:#d4d4d4;">→</span>
-          <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">DuckDB</span>
-          <span style="color:#d4d4d4;">→</span>
-          <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">FastAPI</span>
-          <span style="color:#d4d4d4;">→</span>
-          <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">Plotly</span>
-        </div>
-      </div>
-    </div>
-  </footer>
+ <!-- ─── Footer ─────────────────────────────────── -->
+ <footer style="border-top:1px solid #e8e8e8;padding:32px 0 24px;background:#fff;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
+ <div style="font-size:13px;color:#505050;">
+ Data source: <strong style="color:#000;">Federal Highway Research Institute (BASt)</strong> · Open Data · January 2026
+ </div>
+ <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+ <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">AWS S3</span>
+ <span style="color:#d4d4d4;">→</span>
+ <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">️ Iceberg</span>
+ <span style="color:#d4d4d4;">→</span>
+ <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">DuckDB</span>
+ <span style="color:#d4d4d4;">→</span>
+ <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">FastAPI</span>
+ <span style="color:#d4d4d4;">→</span>
+ <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">Plotly</span>
+ </div>
+ </div>
+ </div>
+ </footer>
 
 <script>
-const BASE = './data';
+const BASE = 'https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/data';
 
 // ── Plotly base layout (light theme) ─────────────────
 const LAYOUT_BASE = {
-  paper_bgcolor: '#ffffff',
-  plot_bgcolor:  '#ffffff',
-  font: { family: "'Inter', -apple-system, sans-serif", color: '#505050', size: 11 },
-  margin: { t: 16, r: 24, b: 56, l: 68 },
-  xaxis: {
-    gridcolor: '#f0f0f0',
-    zerolinecolor: '#e8e8e8',
-    linecolor: '#e8e8e8',
-    tickfont: { size: 11, color: '#505050' },
-  },
-  yaxis: {
-    gridcolor: '#f0f0f0',
-    zerolinecolor: '#e8e8e8',
-    linecolor: '#e8e8e8',
-    tickfont: { size: 11, color: '#505050' },
-  },
-  hoverlabel: {
-    bgcolor: '#1a0030',
-    bordercolor: '#A100FF',
-    font: { size: 12, color: '#fff', family: "'Inter', sans-serif" }
-  },
+ paper_bgcolor: '#ffffff',
+ plot_bgcolor: '#ffffff',
+ font: { family: "'Inter', -apple-system, sans-serif", color: '#505050', size: 11 },
+ margin: { t: 16, r: 24, b: 56, l: 68 },
+ xaxis: {
+ gridcolor: '#f0f0f0',
+ zerolinecolor: '#e8e8e8',
+ linecolor: '#e8e8e8',
+ tickfont: { size: 11, color: '#505050' },
+ },
+ yaxis: {
+ gridcolor: '#f0f0f0',
+ zerolinecolor: '#e8e8e8',
+ linecolor: '#e8e8e8',
+ tickfont: { size: 11, color: '#505050' },
+ },
+ hoverlabel: {
+ bgcolor: '#1a0030',
+ bordercolor: '#A100FF',
+ font: { size: 12, color: '#fff', family: "'Inter', sans-serif" }
+ },
 };
 
 // ── Number formatter ──────────────────────────────────
 function fmt(n) {
-  if (!n && n !== 0) return '–';
-  if (n >= 1e9) return (n / 1e9).toFixed(2).replace('.', ',') + '\u202fMrd.';
-  if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',') + '\u202fMio.';
-  return Math.round(n).toLocaleString('de-DE');
+ if (!n && n !== 0) return '–';
+ if (n >= 1e9) return (n / 1e9).toFixed(2) + '\u202fBn.';
+ if (n >= 1e6) return (n / 1e6).toFixed(1) + '\u202fMn.';
+ return Math.round(n).toLocaleString('en-US');
 }
 
 // ── KPI card builder ──────────────────────────────────
 function kpiCard(value, label, sub) {
-  return `
-  <div class="kpi-card">
-    <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">${label}</div>
-    <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">${value}</div>
-    <div style="font-size:13px;color:#A100FF;font-weight:500;">${sub}</div>
-  </div>`;
+ return `
+ <div class="kpi-card">
+ <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">${label}</div>
+ <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">${value}</div>
+ <div style="font-size:13px;color:#A100FF;font-weight:500;">${sub}</div>
+ </div>`;
 }
 
 // ── Purple gradient colors ────────────────────────────
 const PURPLE_SHADES = [
-  '#A100FF','#8F00E5','#7B00CC','#6800B2','#560099',
-  '#450080','#330066','#22004D','#110033','#05001A',
+ '#A100FF','#8F00E5','#7B00CC','#6800B2','#560099',
+ '#450080','#330066','#22004D','#110033','#05001A',
 ];
 
 // ── Overview ──────────────────────────────────────────
 async function loadOverview() {
-  const r = await fetch(`${BASE}/overview.json`);
-  const d = await r.json();
+ const r = await fetch(`${BASE}/overview.json`);
+ const d = await r.json();
 
-  const wdayVals = d.daily_totals.filter((_, i) => i > 0 && i < 6).map(r => r.kfz_total);
-  const weVals   = [d.daily_totals[0], d.daily_totals[6]].map(r => r.kfz_total);
-  const wdayAvg  = wdayVals.reduce((a, b) => a + b, 0) / Math.max(wdayVals.length, 1);
-  const weAvg    = weVals.reduce((a, b) => a + b, 0) / Math.max(weVals.length, 1);
+ const wdayVals = d.daily_totals.filter((_, i) => i > 0 && i < 6).map(r => r.kfz_total);
+ const weVals = [d.daily_totals[0], d.daily_totals[6]].map(r => r.kfz_total);
+ const wdayAvg = wdayVals.reduce((a, b) => a + b, 0) / Math.max(wdayVals.length, 1);
+ const weAvg = weVals.reduce((a, b) => a + b, 0) / Math.max(weVals.length, 1);
 
-  document.getElementById('kpi-section').innerHTML = [
-    kpiCard(fmt(d.kpis.total_vehicles),                         'Fahrzeuge gesamt',    'Januar 2026'),
-    kpiCard(Math.round(d.kpis.num_stations).toLocaleString('de-DE'), 'Zählstationen',   'aktive Dauerzählstellen'),
-    kpiCard(fmt(wdayAvg),                                        'Ø Werktagsverkehr',   'Montag – Freitag'),
-    kpiCard(fmt(weAvg),                                          'Ø Wochenendverkehr',  'Samstag + Sonntag'),
-  ].join('');
+ document.getElementById('kpi-section').innerHTML = [
+ kpiCard(fmt(d.kpis.total_vehicles), 'Total Vehicles', 'January 2026'),
+ kpiCard(Math.round(d.kpis.num_stations).toLocaleString('en-US'), 'Counting Stations', 'active permanent counting stations'),
+ kpiCard(fmt(wdayAvg), 'Avg. Weekday Traffic', 'Monday – Friday'),
+ kpiCard(fmt(weAvg), 'Avg. Weekend Traffic', 'Saturday + Sunday'),
+ ].join('');
 
-  // Daily area chart
-  Plotly.newPlot('chart-daily', [{
-    x: d.daily_totals.map(r => r.date),
-    y: d.daily_totals.map(r => r.kfz_total),
-    type: 'scatter',
-    mode: 'lines',
-    line: { color: '#A100FF', width: 2.5, shape: 'spline' },
-    fill: 'tozeroy',
-    fillcolor: 'rgba(161,0,255,0.06)',
-    hovertemplate: '<b>%{x|%a, %d. %B}</b><br>%{y:,.0f} Fahrzeuge<extra></extra>',
-  }], {
-    ...LAYOUT_BASE,
-    height: 380,
-    margin: { t: 16, r: 24, b: 52, l: 80 },
-    hovermode: 'x unified',
-    yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f' },
-    xaxis: { ...LAYOUT_BASE.xaxis, tickformat: '%d. %b' },
-  }, { responsive: true, displayModeBar: false });
+ // Daily area chart
+ Plotly.newPlot('chart-daily', [{
+ x: d.daily_totals.map(r => r.date),
+ y: d.daily_totals.map(r => r.kfz_total),
+ type: 'scatter',
+ mode: 'lines',
+ line: { color: '#A100FF', width: 2.5, shape: 'spline' },
+ fill: 'tozeroy',
+ fillcolor: 'rgba(161,0,255,0.06)',
+ hovertemplate: '<b>%{x|%a, %b %d}</b><br>%{y:,.0f} Vehicles<extra></extra>',
+ }], {
+ ...LAYOUT_BASE,
+ height: 380,
+ margin: { t: 16, r: 24, b: 52, l: 80 },
+ hovermode: 'x unified',
+ yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f' },
+ xaxis: { ...LAYOUT_BASE.xaxis, tickformat: '%b %d' },
+ }, { responsive: true, displayModeBar: false });
 
-  // Top 10 horizontal bar
-  const t10 = d.top10_stations.slice().reverse();
-  Plotly.newPlot('chart-top10', [{
-    x: t10.map(r => r.kfz_total),
-    y: t10.map(r => (r.station_name || r.station_id).slice(0, 35)),
-    type: 'bar',
-    orientation: 'h',
-    marker: {
-      color: t10.map((_, i) => PURPLE_SHADES[i] || '#A100FF'),
-      line: { width: 0 }
-    },
-    hovertemplate: '<b>%{y}</b><br>%{x:,.0f} Kfz<extra></extra>',
-  }], {
-    ...LAYOUT_BASE,
-    height: 420,
-    margin: { t: 16, r: 24, b: 44, l: 216 },
-    xaxis: { ...LAYOUT_BASE.xaxis, tickformat: ',.0f' },
-    bargap: 0.38,
-  }, { responsive: true, displayModeBar: false });
+ // Top 10 horizontal bar
+ const t10 = d.top10_stations.slice().reverse();
+ Plotly.newPlot('chart-top10', [{
+ x: t10.map(r => r.kfz_total),
+ y: t10.map(r => (r.station_name || r.station_id).slice(0, 35)),
+ type: 'bar',
+ orientation: 'h',
+ marker: {
+ color: t10.map((_, i) => PURPLE_SHADES[i] || '#A100FF'),
+ line: { width: 0 }
+ },
+ hovertemplate: '<b>%{y}</b><br>%{x:,.0f} Vehicles<extra></extra>',
+ }], {
+ ...LAYOUT_BASE,
+ height: 420,
+ margin: { t: 16, r: 24, b: 44, l: 216 },
+ xaxis: { ...LAYOUT_BASE.xaxis, tickformat: ',.0f' },
+ bargap: 0.38,
+ }, { responsive: true, displayModeBar: false });
 
-  // States donut
-  const states = d.states.filter(s => s.state && s.state !== 'None').slice(0, 12);
-  const donutColors = [
-    '#A100FF','#8F00E5','#7B00CC','#6800B2','#560099',
-    '#450080','#330066','#22004D','#B833FF','#C966FF',
-    '#D499FF','#E0BFFF',
-  ];
-  Plotly.newPlot('chart-states', [{
-    labels: states.map(s => s.state),
-    values: states.map(s => s.kfz_total),
-    type: 'pie',
-    hole: 0.52,
-    marker: { colors: donutColors, line: { color: '#fff', width: 2 } },
-    textinfo: 'percent',
-    textfont: { size: 10, family: "'Inter', sans-serif", color: '#fff' },
-    hovertemplate: '<b>%{label}</b><br>%{value:,.0f} Kfz<br>%{percent}<extra></extra>',
-  }], {
-    paper_bgcolor: '#ffffff',
-    plot_bgcolor:  '#ffffff',
-    font: { color: '#505050', size: 10, family: "'Inter', sans-serif" },
-    margin: { t: 16, r: 120, b: 16, l: 16 },
-    height: 420,
-    legend: {
-      x: 1.04, y: 0.5, xanchor: 'left', yanchor: 'middle',
-      font: { size: 10, color: '#505050' },
-      bgcolor: 'transparent',
-    },
-    hoverlabel: LAYOUT_BASE.hoverlabel,
-  }, { responsive: true, displayModeBar: false });
+ // States donut
+ const states = d.states.filter(s => s.state && s.state !== 'None').slice(0, 12);
+ const donutColors = [
+ '#A100FF','#8F00E5','#7B00CC','#6800B2','#560099',
+ '#450080','#330066','#22004D','#B833FF','#C966FF',
+ '#D499FF','#E0BFFF',
+ ];
+ Plotly.newPlot('chart-states', [{
+ labels: states.map(s => s.state),
+ values: states.map(s => s.kfz_total),
+ type: 'pie',
+ hole: 0.52,
+ marker: { colors: donutColors, line: { color: '#fff', width: 2 } },
+ textinfo: 'percent',
+ textfont: { size: 10, family: "'Inter', sans-serif", color: '#fff' },
+ hovertemplate: '<b>%{label}</b><br>%{value:,.0f} Vehicles<br>%{percent}<extra></extra>',
+ }], {
+ paper_bgcolor: '#ffffff',
+ plot_bgcolor: '#ffffff',
+ font: { color: '#505050', size: 10, family: "'Inter', sans-serif" },
+ margin: { t: 16, r: 120, b: 16, l: 16 },
+ height: 420,
+ legend: {
+ x: 1.04, y: 0.5, xanchor: 'left', yanchor: 'middle',
+ font: { size: 10, color: '#505050' },
+ bgcolor: 'transparent',
+ },
+ hoverlabel: LAYOUT_BASE.hoverlabel,
+ }, { responsive: true, displayModeBar: false });
 }
 
 // ── Stations dropdown ─────────────────────────────────
 async function loadStations() {
-  const r = await fetch(`${BASE}/stations.json`);
-  const d = await r.json();
-  const sel = document.getElementById('station-select');
-  sel.innerHTML = d.stations.map(s =>
-    `<option value="${s.station_id}">${s.station_name || s.station_id} · ${s.state || '?'} · ${s.road_class || ''}${s.road_number || ''}</option>`
-  ).join('');
-  sel.addEventListener('change', () => loadHourly(sel.value));
-  if (d.stations.length) loadHourly(d.stations[0].station_id);
+ const r = await fetch(`${BASE}/stations.json`);
+ const d = await r.json();
+ const sel = document.getElementById('station-select');
+ sel.innerHTML = d.stations.map(s =>
+ `<option value="${s.station_id}">${s.station_name || s.station_id} · ${s.state || '?'} · ${s.road_class || ''}${s.road_number || ''}</option>`
+ ).join('');
+ sel.addEventListener('change', () => loadHourly(sel.value));
+ if (d.stations.length) loadHourly(d.stations[0].station_id);
 }
 
 // ── Hourly profile ────────────────────────────────────
 async function loadHourly(stationId) {
-  document.getElementById('chart-hourly').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;height:360px;color:#505050;font-size:13px;">
-      <svg class="spinner" width="18" height="18" fill="none" viewBox="0 0 24 24">
-        <circle style="opacity:.25" cx="12" cy="12" r="10" stroke="#A100FF" stroke-width="4"/>
-        <path style="opacity:.75" fill="#A100FF" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-      Lade Stundendaten…
-    </div>`;
+ document.getElementById('chart-hourly').innerHTML = `
+ <div style="display:flex;align-items:center;justify-content:center;gap:10px;height:360px;color:#505050;font-size:13px;">
+ <svg class="spinner" width="18" height="18" fill="none" viewBox="0 0 24 24">
+ <circle style="opacity:.25" cx="12" cy="12" r="10" stroke="#A100FF" stroke-width="4"/>
+ <path style="opacity:.75" fill="#A100FF" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+ </svg>
+ Loading hourly data…
+ </div>`;
 
-  try {
-    const r = await fetch(`${BASE}/hourly/${stationId}.json`);
-    const d = await r.json();
-    const byHour = Array(24).fill(0);
-    const count  = Array(24).fill(0);
-    d.data.forEach(row => {
-      const h = parseInt(row.hour);
-      if (h >= 0 && h < 24) { byHour[h] += row.kfz_total; count[h]++; }
-    });
-    const avg   = byHour.map((v, i) => count[i] ? Math.round(v / count[i]) : 0);
-    const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+ try {
+ const r = await fetch(`${BASE}/hourly/${stationId}.json?v=2`);
+ const d = await r.json();
 
-    // Color coding: morning peak orange-purple, evening peak darker, day traffic mid-purple, night light
-    const colors = avg.map((_, i) => {
-      if (i >= 7 && i <= 9)   return '#7B00CC';   // Morgenspitze
-      if (i >= 16 && i <= 18) return '#4B0082';   // Abendspitze
-      if (i >= 10 && i <= 15) return '#A100FF';   // Tagverkehr
-      return '#D499FF';                             // Nacht/Schwachverkehr
-    });
-    const peak = Math.max(...avg);
+ // Pre-aggregated: already Mon-Fri averages, 24 rows max
+ const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+ const avgPkw = Array(24).fill(0);
+ const avgLkw = Array(24).fill(0);
+ d.data.forEach(row => {
+   const h = row.h ?? row.hour ?? 0;
+   avgPkw[h] = row.pkw || 0;
+   avgLkw[h] = row.lkw || 0;
+ });
+ const peak = Math.max(...avgPkw, ...avgLkw, 1);
 
-    Plotly.newPlot('chart-hourly', [{
-      x: hours, y: avg, type: 'bar',
-      marker: { color: colors, line: { width: 0 } },
-      hovertemplate: '<b>%{x}</b><br>%{y:,.0f} Kfz (Monatsmittel)<extra></extra>',
-    }], {
-      ...LAYOUT_BASE,
-      height: 360,
-      bargap: 0.22,
-      margin: { t: 40, r: 24, b: 52, l: 80 },
-      annotations: [
-        { x: '08:00', y: peak * 0.92, text: 'Morgenspitze', showarrow: false,
-          font: { size: 10, color: '#7B00CC', family: "'Inter', sans-serif", weight: 600 } },
-        { x: '17:00', y: peak * 0.92, text: 'Abendspitze', showarrow: false,
-          font: { size: 10, color: '#4B0082', family: "'Inter', sans-serif", weight: 600 } },
-      ],
-      xaxis: { ...LAYOUT_BASE.xaxis, title: { text: 'Uhrzeit', font: { size: 11, color: '#505050' }, standoff: 10 } },
-      yaxis: { ...LAYOUT_BASE.yaxis, title: { text: 'Kfz (Ø)', font: { size: 11, color: '#505050' }, standoff: 10 } },
-    }, { responsive: true, displayModeBar: false });
+ Plotly.newPlot('chart-hourly', [
+ {
+ x: hours, y: avgPkw,
+ type: 'scatter', mode: 'lines+markers',
+ name: 'PKW',
+ line: { color: '#A100FF', width: 2.5, shape: 'spline' },
+ marker: { color: '#A100FF', size: 5 },
+ fill: 'tozeroy', fillcolor: 'rgba(161,0,255,0.06)',
+ hovertemplate: '<b>%{x}</b> PKW: %{y:,.0f} (Mon–Fri avg)<extra></extra>',
+ },
+ {
+ x: hours, y: avgLkw,
+ type: 'scatter', mode: 'lines+markers',
+ name: 'LKW',
+ line: { color: '#d29922', width: 2, shape: 'spline', dash: 'dot' },
+ marker: { color: '#d29922', size: 4 },
+ hovertemplate: '<b>%{x}</b> LKW: %{y:,.0f} (Mon–Fri avg)<extra></extra>',
+ }
+ ], {
+ ...LAYOUT_BASE,
+ height: 320,
+ margin: { t: 24, r: 24, b: 52, l: 72 },
+ legend: { x: 0.01, y: 0.99, bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#e0e0e0', borderwidth: 1, font: { size: 11 } },
+ annotations: [
+ { x: '08:00', y: peak, text: ' Morning peak', showarrow: false,
+ yanchor: 'bottom', font: { size: 10, color: '#7B00CC' } },
+ { x: '17:00', y: peak, text: ' Evening peak', showarrow: false,
+ yanchor: 'bottom', font: { size: 10, color: '#7B00CC' } },
+ ],
+ xaxis: { ...LAYOUT_BASE.xaxis, title: { text: 'Time of day', font: { size: 11, color: '#505050' }, standoff: 10 } },
+ yaxis: { ...LAYOUT_BASE.yaxis, rangemode: 'tozero', autorange: true, tickformat: ',d', nticks: 6, title: { text: 'Avg Vehicles/h (Mon–Fri)', font: { size: 11, color: '#505050' }, standoff: 10 } },
+ }, { responsive: true, displayModeBar: false });
 
-  } catch {
-    document.getElementById('chart-hourly').innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:center;height:360px;color:#505050;font-size:13px;">Keine Stundendaten für diese Station verfügbar</div>';
-  }
+ } catch {
+ document.getElementById('chart-hourly').innerHTML =
+ '<div style="display:flex;align-items:center;justify-content:center;height:360px;color:#505050;font-size:13px;">No hourly data available for this station</div>';
+ }
 }
 
 loadOverview().catch(console.error);
 loadStations().catch(console.error);
 
-// ── Iceberg metadata ───────────────────────────────────
-async function loadIcebergInfo() {
-  const API_BASE = 'http://localhost:8000';
-  try {
-    const r = await fetch(`${API_BASE}/api/iceberg/info`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const d = await r.json();
-
-    const snapshotShort = d.snapshot_id ? String(d.snapshot_id).slice(0, 10) + '…' : 'N/A';
-    const snapshotDate = d.snapshot_timestamp_ms
-      ? new Date(d.snapshot_timestamp_ms).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : '';
-
-    const cards = [
-      { label: 'Format',       value: 'Iceberg v2', sub: 'Apache Iceberg', icon: '❄️' },
-      { label: 'Snapshot ID',  value: snapshotShort, sub: snapshotDate ? `Erstellt ${snapshotDate}` : `${d.num_snapshots} Snapshot(s)`, icon: '📸' },
-      { label: 'Data Files',   value: d.num_data_files, sub: 'Parquet in Iceberg', icon: '📦' },
-      { label: 'S3 Region',    value: 'eu-central-1', sub: 'bast-traffic-demo', icon: '☁️' },
-    ];
-
-    const grid = document.getElementById('iceberg-meta-grid');
-    grid.innerHTML = cards.map(c => `
-      <div class="iceberg-card" style="border-left:3px solid #A100FF;">
-        <div style="font-size:11px;font-weight:600;color:#505050;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px;">${c.icon} ${c.label}</div>
-        <div style="font-size:22px;font-weight:700;color:#000;letter-spacing:-0.02em;font-family:'Fira Code',monospace;margin-bottom:4px;">${c.value}</div>
-        <div style="font-size:12px;color:#A100FF;font-weight:500;">${c.sub}</div>
-      </div>
-    `).join('');
-
-    const schemaEl = document.getElementById('iceberg-schema');
-    schemaEl.style.display = 'block';
-    schemaEl.querySelector('pre').textContent = d.schema || '';
-
-  } catch (err) {
-    const grid = document.getElementById('iceberg-meta-grid');
-    grid.innerHTML = `
-      <div style="grid-column:1/-1;padding:20px;border:1px solid #e8e8e8;border-radius:2px;background:#fafafa;">
-        <div style="font-size:13px;font-weight:600;color:#000;margin-bottom:6px;">❄️ Iceberg Metadaten nicht erreichbar</div>
-        <div style="font-size:12px;color:#505050;">Starte das Backend: <code style="font-family:monospace;background:#f0f0f0;padding:2px 6px;border-radius:2px;">uvicorn api.main:app --port 8000</code></div>
-        <div style="font-size:11px;color:#A100FF;margin-top:6px;opacity:0.8;">${err.message}</div>
-      </div>
-    `;
+// ── MAP: lazy-load on scroll into view ────────────────────────────────────────
+let _mapData = null;
+let _mapLoaded = false;
+const _mapObserver = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting && !_mapLoaded) {
+    _mapLoaded = true;
+    loadMap().catch(console.error);
+    _mapObserver.disconnect();
   }
-}
+}, { rootMargin: '200px' });
+_mapObserver.observe(document.getElementById('map-chart'));
 
-loadIcebergInfo().catch(console.error);
-
-// ── MAP ──────────────────────────────────────────────────────────────────────
 async function loadMap() {
-  const r = await fetch('./data/stations_map.json');
-  const stations = await r.json();
+ const r = await fetch(`${BASE}/stations_map.json`);
+ const stations = await r.json();
+ _mapData = stations;
 
-  const max = Math.max(...stations.map(s => s.kfz_total));
+ const max = Math.max(...stations.map(s => s.kfz_total));
+ function radius(v) { return 4 + (v / max) * 10; }
 
-  function color(v) {
-    const t = v / max;
-    if (t > 0.7) return '#A100FF';
-    if (t > 0.4) return '#7B00CC';
-    if (t > 0.2) return '#4B0082';
-    return '#9B59B6';
-  }
-  function radius(v) {
-    return 4 + (v / max) * 10;
-  }
+ const trace = {
+ type: 'scattermapbox',
+ lat: stations.map(s => s.lat),
+ lon: stations.map(s => s.lon),
+ mode: 'markers',
+ marker: {
+ size: stations.map(s => radius(s.kfz_total)),
+ color: stations.map(s => s.kfz_total),
+ colorscale: [[0,'#D499FF'],[0.3,'#7B00CC'],[0.7,'#A100FF'],[1,'#4B0082']],
+ colorbar: { title: 'Vehicles/Month', titlefont: {size:11,color:'#505050'}, tickformat:',.0f', len:0.6, thickness:12, x:1.02, tickfont:{size:10,color:'#505050'} },
+ opacity: 0.85,
+ },
+ text: stations.map(s => `<b>${s.station_name||s.station_id}</b><br>${s.state} · ${s.road_class}${s.road_number}<br>${(s.kfz_total/1e6).toFixed(2)}M Vehicles`),
+ hovertemplate: '%{text}<extra></extra>',
+ };
 
-  // Build Plotly scattermapbox
-  Plotly.newPlot('map-chart', [{
-    type: 'scattermapbox',
-    lat: stations.map(s => s.lat),
-    lon: stations.map(s => s.lon),
-    mode: 'markers',
-    marker: {
-      size: stations.map(s => radius(s.kfz_total)),
-      color: stations.map(s => s.kfz_total),
-      colorscale: [
-        [0, '#D499FF'], [0.3, '#7B00CC'], [0.7, '#A100FF'], [1, '#4B0082']
-      ],
-      colorbar: {
-        title: 'Kfz/Monat',
-        titlefont: { size: 11, color: '#505050' },
-        tickformat: ',.0f',
-        len: 0.6, thickness: 12,
-        x: 1.02,
-        tickfont: { size: 10, color: '#505050' },
-      },
-      opacity: 0.85,
-    },
-    text: stations.map(s =>
-      `<b>${s.station_name || s.station_id}</b><br>${s.state} · ${s.road_class}${s.road_number}<br>${(s.kfz_total/1e6).toFixed(2)} Mio. Kfz`
-    ),
-    hovertemplate: '%{text}<extra></extra>',
-  }], {
-    mapbox: { style: 'carto-positron', center: { lat: 51.2, lon: 10.4 }, zoom: 5 },
-    paper_bgcolor: '#ffffff',
-    margin: { t: 0, r: 0, b: 0, l: 0 },
-    height: 520,
-  }, { responsive: true, displayModeBar: false });
+ const layout = {
+ mapbox: { style: 'carto-positron', center: { lat: 51.2, lon: 10.4 }, zoom: 5 },
+ paper_bgcolor: '#ffffff',
+ margin: { t:0, r:0, b:0, l:0 },
+ height: 520,
+ };
+
+ Plotly.newPlot('map-chart', [trace], layout, { responsive: true, displayModeBar: false });
 }
 
-loadMap().catch(e => {
-  document.getElementById('map-chart').innerHTML =
-    '<div style="padding:40px;text-align:center;color:#505050;font-size:14px;">Kartendaten konnten nicht geladen werden.</div>';
-});
+function toggleMapFullscreen() {
+ const overlay = document.getElementById('map-overlay');
+ const btn = document.getElementById('map-fullscreen-btn');
+ const isOpen = overlay.style.display === 'flex';
+
+ if (isOpen) {
+ overlay.style.display = 'none';
+ document.body.style.overflow = '';
+ btn.innerHTML = ' Fullscreen';
+ } else {
+ overlay.style.display = 'flex';
+ document.body.style.overflow = 'hidden';
+ btn.innerHTML = ' Close';
+
+ if (_mapData) {
+ const max = Math.max(..._mapData.map(s => s.kfz_total));
+ const trace = {
+ type: 'scattermapbox',
+ lat: _mapData.map(s => s.lat),
+ lon: _mapData.map(s => s.lon),
+ mode: 'markers',
+ marker: {
+ size: _mapData.map(s => 4 + (s.kfz_total/max)*12),
+ color: _mapData.map(s => s.kfz_total),
+ colorscale: [[0,'#D499FF'],[0.3,'#7B00CC'],[0.7,'#A100FF'],[1,'#4B0082']],
+ opacity: 0.85,
+ },
+ text: _mapData.map(s => `<b>${s.station_name||s.station_id}</b><br>${s.state} · ${s.road_class}${s.road_number}<br>${(s.kfz_total/1e6).toFixed(2)}M Vehicles`),
+ hovertemplate: '%{text}<extra></extra>',
+ };
+ Plotly.newPlot('map-chart-fullscreen', [trace], {
+ mapbox: { style: 'carto-positron', center: { lat: 51.2, lon: 10.4 }, zoom: 5.5 },
+ paper_bgcolor: '#ffffff',
+ margin: { t:0, r:0, b:0, l:0 },
+ height: window.innerHeight - 52,
+ }, { responsive: true, displayModeBar: true });
+ }
+ }
+}
 </script>
 
 <!-- Responsive grid styles -->
 <style>
-  @media (max-width: 900px) {
-    #kpi-section { grid-template-columns: repeat(2, 1fr) !important; }
-    #iceberg-meta-grid { grid-template-columns: repeat(2, 1fr) !important; }
-    div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
-  }
-  @media (max-width: 600px) {
-    #kpi-section { grid-template-columns: 1fr !important; }
-    #iceberg-meta-grid { grid-template-columns: 1fr !important; }
-    .kpi-card { padding: 20px 20px 18px !important; }
-    .kpi-value { font-size: 40px !important; }
-    div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: 1fr !important; }
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
+ @media (max-width: 900px) {
+ #kpi-section { grid-template-columns: repeat(2, 1fr) !important; }
+ div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+ }
+ @media (max-width: 600px) {
+ #kpi-section { grid-template-columns: 1fr !important; }
+ .kpi-card { padding: 20px 20px 18px !important; }
+ .kpi-value { font-size: 40px !important; }
+ div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: 1fr !important; }
+ }
+ @keyframes pulse {
+ 0%, 100% { opacity: 1; }
+ 50% { opacity: 0.5; }
+ }
 </style>
 </body>
 </html>

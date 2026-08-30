@@ -38,7 +38,9 @@ h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .arch-box:hover { border-color: #A100FF; box-shadow: 0 2px 12px rgba(161,0,255,0.10); }
-.arch-box .icon { font-size: 24px; margin-bottom: 8px; display: block; }
+.arch-box .icon { width:28px;height:28px;margin-bottom:8px;display:block;color:#A100FF; }
+.arch-box .icon svg { width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round; }
+.layer-icon svg { width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:inline-block;vertical-align:-2px;margin-right:5px; }
 .arch-box .label { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 4px; }
 .arch-box .sub { font-size: 11px; color: #707070; line-height: 1.4; }
 .arch-box .tech { margin-top: 8px; font-size: 10px; font-weight: 600; color: #A100FF; background: #f3e5ff; padding: 2px 7px; border-radius: 2px; display: inline-block; }
@@ -412,7 +414,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-flow">
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon">🏭</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">SAP / Source Systems</div>
  <div class="sub">ERP, BW, S/4HANA<br>or any structured source</div>
  <span class="tech">SAP BTP / SLT</span>
@@ -421,7 +423,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">🔄</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg></span>
  <div class="label">CDC Layer</div>
  <div class="sub">AWS DMS (databases)<br>or Debezium → Kafka<br>(on-prem / multi-cloud)</div>
  <span class="tech">DMS / Debezium</span>
@@ -430,7 +432,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">📡</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.07 5.07A17 17 0 001 12c0 6.63 4.05 12.34 9.93 14.66M18.93 5.07A17 17 0 0123 12a17 17 0 01-9.93 14.66"/><path d="M8.46 8.46A11 11 0 005 12c0 3.87 2.01 7.27 5.02 9.18M15.54 8.46A11 11 0 0119 12a11 11 0 01-5.02 9.18"/><circle cx="12" cy="12" r="2"/></svg></span>
  <div class="label">Streaming Transport</div>
  <div class="sub">Kinesis Data Streams (AWS)<br>or Apache Kafka<br>+ Schema Registry</div>
  <span class="tech">Kinesis / Kafka</span>
@@ -439,7 +441,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">⚡</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
  <div class="label">Stream Processing</div>
  <div class="sub">AWS Glue Streaming (managed)<br>or Apache Flink OSS<br>sub-second latency</div>
  <span class="tech">Flink / Glue</span>
@@ -454,7 +456,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-flow">
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">📚</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></span>
  <div class="label">Catalog</div>
  <div class="sub">AWS Glue Data Catalog<br>+ Lake Formation (AWS-native)<br>or Project Nessie (git-branching)</div>
  <span class="tech">Nessie / Glue Cat.</span>
@@ -463,7 +465,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">🧊</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19.5 6.5 19.5 17.5 12 22 4.5 17.5 4.5 6.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.5" y1="6.5" x2="19.5" y2="17.5"/><line x1="19.5" y1="6.5" x2="4.5" y2="17.5"/></svg></span>
  <div class="label">Apache Iceberg v2</div>
  <div class="sub">ACID · Time Travel<br>Schema Evolution<br>Partition Evolution</div>
  <span class="tech">Iceberg v2 on S3</span>
@@ -472,7 +474,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">🔍</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
  <div class="label">Query Layer</div>
  <div class="sub">Amazon Athena (serverless)<br>+ Trino on ECS Fargate<br>(distributed, petabyte-scale)</div>
  <span class="tech">Athena + Trino</span>
@@ -481,7 +483,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">🤖</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="4" r="1"/><path d="M7 13h.01M17 13h.01M9 17h6"/></svg></span>
  <div class="label">AI Agent Layer</div>
  <div class="sub">Claude text-to-SQL<br>Natural language → SQL<br>→ Iceberg → answer</div>
  <span class="tech">Claude + FastAPI</span>
@@ -490,7 +492,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon">📊</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
  <div class="label">Visualization</div>
  <div class="sub">Apache Superset (OSS)<br>or custom React/Plotly<br>dashboard</div>
  <span class="tech">Superset / React</span>
@@ -503,11 +505,11 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="tag tag-green">Key Capabilities</div>
  <div class="layers">
  <div class="layer layer-bronze">
-  <div class="layer-label">⚡ Streaming</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> Streaming</div>
   <div class="layer-desc"><strong>Sub-second latency with Apache Flink</strong> or minute-level with AWS Glue Streaming. Iceberg sink in append or upsert mode. Exactly-once semantics via checkpointing. Merge-on-read for streaming; copy-on-write for batch reads.</div>
  </div>
  <div class="layer layer-silver">
-  <div class="layer-label">🧊 Iceberg v2</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19.5 6.5 19.5 17.5 12 22 4.5 17.5 4.5 6.5 12 2"/></svg></span> Iceberg v2</div>
   <div class="layer-desc">
    <strong>ACID transactions · Schema evolution · Time travel · Partition evolution · Compaction</strong><br>
    <code style="font-size:11px;background:#f0f0f0;padding:2px 6px;border-radius:2px;">OPTIMIZE table REWRITE DATA USING BIN_PACK;</code> (Athena small file compaction)<br>
@@ -515,11 +517,11 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
   </div>
  </div>
  <div class="layer layer-gold">
-  <div class="layer-label">🌿 Nessie</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 19.5a1 1 0 01-1.41.14A9 9 0 018 3c4-.5 8 1.5 10 4.5"/><path d="M17 8l-3 9.5"/></svg></span> Nessie</div>
   <div class="layer-desc"><strong>Git-like data branching:</strong> dev → staging → prod. Commit, merge, rollback data changes like code. REST API. Self-hostable on ECS or Dremio Arctic as managed service.</div>
  </div>
  <div class="layer layer-platinum">
-  <div class="layer-label">🔒 Governance</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span> Governance</div>
   <div class="layer-desc"><strong>Column/row-level security via AWS Lake Formation.</strong> Amazon DataZone for business catalog and data discovery. Schema evolution without rewriting data — add, rename, or drop columns in place.</div>
  </div>
  </div>
@@ -535,7 +537,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-flow">
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">SAP</div>
  <div class="sub">ERP / BW<br>SFTP Export<br>ODP / CDS Views</div>
  <span class="tech">SAP BTP / SLT</span>
@@ -544,7 +546,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon">🪣</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 2 3 6 3 11c0 5 4 11 9 11s9-6 9-11C21 6 17 2 12 2z"/><path d="M3 11h18"/></svg></span>
  <div class="label">AWS S3</div>
  <div class="sub">Landing Zone<br>Raw Files<br>Versioned</div>
  <span class="tech">S3 + Lifecycle</span>
@@ -553,7 +555,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">Databricks</div>
  <div class="sub">Delta Lake<br>Medallion Layer</div>
  <span class="tech">Spark + Unity Cat.</span>
@@ -562,7 +564,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">Power BI</div>
  <div class="sub">DirectQuery<br>Dashboards<br>Self-Service</div>
  <span class="tech">Premium / Fabric</span>
@@ -575,15 +577,15 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="tag tag-blue">Databricks Medallion Layer</div>
  <div class="layers">
  <div class="layer layer-bronze">
- <div class="layer-label"> Bronze</div>
+ <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></span> Bronze</div>
  <div class="layer-desc"><strong>Raw Ingest:</strong> Raw data 1:1 from SAP (CSV/Parquet), no transformation. Full source fidelity, audit log. Schema-on-Read.</div>
  </div>
  <div class="layer layer-silver">
- <div class="layer-label"> Silver</div>
+ <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></span> Silver</div>
  <div class="layer-desc"><strong>Cleansed:</strong> Deduplicated, typed, filtered. PII masking. Delta format with Z-Ordering. Join-ready for analytics.</div>
  </div>
  <div class="layer layer-gold">
- <div class="layer-label"> Gold</div>
+ <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></span> Gold</div>
  <div class="layer-desc"><strong>Business Aggregates:</strong> KPIs, dimensional model (Star Schema), pre-computed metrics. Optimised for Power BI DirectQuery.</div>
  </div>
  </div>
@@ -599,7 +601,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-flow">
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">SAP</div>
  <div class="sub">via ADF Connector<br>or SFTP Drop</div>
  <span class="tech">SAP BW / S/4</span>
@@ -608,7 +610,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">Azure Data Factory</div>
  <div class="sub">Orchestration<br>Transformation<br>Scheduling</div>
  <span class="tech">ADF / Synapse Pipelines</span>
@@ -617,7 +619,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">️</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
  <div class="label">Fabric Lakehouse</div>
  <div class="sub">OneLake (ADLS)<br>Delta Parquet<br>Notebook + SQL</div>
  <span class="tech">Microsoft Fabric</span>
@@ -626,7 +628,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">Fabric Warehouse</div>
  <div class="sub">SQL Endpoint<br>Semantic Model<br>Certified Datasets</div>
  <span class="tech">T-SQL / DAX</span>
@@ -635,7 +637,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon"></span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
  <div class="label">Power BI</div>
  <div class="sub">Native Integration<br>Auto-refresh<br>Row-Level Security</div>
  <span class="tech">Fabric-native</span>
@@ -655,7 +657,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
 
  <!-- "You are here" callout -->
  <div style="margin-top:20px;margin-bottom:24px;padding:16px 20px;background:#fdf5ff;border:2px solid #A100FF;border-radius:6px;display:flex;align-items:flex-start;gap:12px;">
-  <span style="font-size:22px;">👁️</span>
+  <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;background:#A100FF;border-radius:50%;flex-shrink:0;"><svg viewBox="0 0 24 24" width="18" height="18" stroke="#fff" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
   <div>
    <div style="font-size:14px;font-weight:700;color:#A100FF;margin-bottom:4px;">You are looking at Option D right now.</div>
    <div style="font-size:13px;color:#333;line-height:1.6;">
@@ -667,7 +669,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-flow">
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon">📂</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></span>
  <div class="label">BASt Open Data</div>
  <div class="sub">CSV/ZIP files<br>Public download</div>
  <span class="tech">CSV / ZIP</span>
@@ -676,7 +678,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">🐍</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="19" y1="12" x2="5" y2="12"/></svg></span>
  <div class="label">Python Parser</div>
  <div class="sub">Manual script<br>scripts/parse_bast.py<br>Local execution</div>
  <span class="tech">Python 3.11</span>
@@ -685,7 +687,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">🧊</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19.5 6.5 19.5 17.5 12 22 4.5 17.5 4.5 6.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.5" y1="6.5" x2="19.5" y2="17.5"/><line x1="19.5" y1="6.5" x2="4.5" y2="17.5"/></svg></span>
  <div class="label">Apache Iceberg v2</div>
  <div class="sub">Local Parquet → S3<br>PyIceberg + SQLite catalog<br>ACID · Time Travel</div>
  <span class="tech">PyIceberg v0.7</span>
@@ -694,7 +696,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon">🦆</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="14" rx="7" ry="5"/><circle cx="16" cy="9" r="3"/><path d="M19 9h2v2h-2z"/></svg></span>
  <div class="label">DuckDB</div>
  <div class="sub">Local query engine<br>SQL on Parquet/S3<br>In-process analytics</div>
  <span class="tech">DuckDB 1.x</span>
@@ -703,7 +705,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step">
  <div class="arch-box">
- <span class="icon">⚡</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
  <div class="label">FastAPI + S3</div>
  <div class="sub">Pre-aggregated JSON<br>→ S3 static hosting<br>No server at runtime</div>
  <span class="tech">FastAPI / S3</span>
@@ -712,7 +714,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon">📊</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
  <div class="label">React + Plotly</div>
  <div class="sub">CDN-only dashboard<br>S3 static hosting<br>This page ↑</div>
  <span class="tech">CDN-only</span>
@@ -725,19 +727,19 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="tag tag-purple">Why Option D First?</div>
  <div class="layers">
  <div class="layer layer-bronze">
-  <div class="layer-label">🚀 Speed</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/></svg></span> Speed</div>
   <div class="layer-desc"><strong>Demonstrable in one day.</strong> No cluster provisioning, no IAM setup, no DevOps overhead. Raw data to live dashboard in hours. This is the PoC that convinces stakeholders to invest in Option A.</div>
  </div>
  <div class="layer layer-silver">
-  <div class="layer-label">💶 Cost</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M8 15h8"/><path d="M15 9a4 4 0 100 8"/></svg></span> Cost</div>
   <div class="layer-desc"><strong>~€5/month</strong> (S3 storage only). Zero compute at runtime — data is pre-aggregated and served as static JSON. The cheapest possible production artifact that proves the architecture concept.</div>
  </div>
  <div class="layer layer-gold">
-  <div class="layer-label">🧊 Real Iceberg</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19.5 6.5 19.5 17.5 12 22 4.5 17.5 4.5 6.5 12 2"/></svg></span> Real Iceberg</div>
   <div class="layer-desc"><strong>Uses the real Apache Iceberg v2 format</strong> — the same table format as Option A. Time travel, ACID semantics, schema evolution. The PoC uses the same data foundations as the production path.</div>
  </div>
  <div class="layer layer-platinum">
-  <div class="layer-label">📋 Limitations</div>
+  <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></span> Limitations</div>
   <div class="layer-desc"><strong>Not production-grade:</strong> DuckDB is single-node (limited above ~100 GB). SQLite catalog doesn't scale. No streaming. No governance. No multi-user query engine. These gaps are exactly what Option A closes.</div>
  </div>
  </div>
@@ -801,7 +803,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
               <div style="width:4px;height:4px;border-radius:50%;background:#A100FF;margin-top:6px;flex-shrink:0;"></div>
               <div>
                 <div style="font-size:13px;font-weight:600;color:#111;">Data Quality Agents</div>
-                <div style="font-size:12px;color:#505050;margin-top:2px;">Continuously validate Iceberg/Delta tables, detect schema drift, auto-quarantine bad data before it reaches Gold layer</div>
+                <div style="font-size:12px;color:#505050;margin-top:2px;">Continuously validate Iceberg/Delta tables, detect schema drift, auto-quarantine bad data before it reaches<span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></span> Gold layer</div>
               </div>
             </div>
             <div style="display:flex;gap:12px;align-items:flex-start;">

@@ -475,9 +475,28 @@ async function loadHourly(stationId) {
     const pkwData = [];
     const lkwData = [];
 
-    // Build sorted arrays h=0..23
+    // Detect format: pre-aggregated {h, pkw, lkw} or raw {date, hour, kfz_total, pkw, lkw}
+    const isRaw = d.data[0] && d.data[0].date !== undefined;
     const byH = {};
-    d.data.forEach(row => { byH[row.h] = row; });
+    if (isRaw) {
+      // Aggregate raw rows: weekdays only, average per hour
+      const acc = {};
+      d.data.forEach(row => {
+        const dt = new Date(row.date + 'T00:00:00Z');
+        if (dt.getUTCDay() === 0 || dt.getUTCDay() === 6) return;
+        const h = (row.hour || 0) % 24;
+        if (!acc[h]) acc[h] = {pkw: 0, lkw: 0, n: 0};
+        acc[h].pkw += (row.pkw || 0);
+        acc[h].lkw += (row.lkw || row.kfz_total - row.pkw || 0);
+        acc[h].n++;
+      });
+      for (let h = 0; h < 24; h++) {
+        byH[h] = acc[h] ? {pkw: Math.round(acc[h].pkw / acc[h].n), lkw: Math.round(acc[h].lkw / acc[h].n)} : {pkw: 0, lkw: 0};
+      }
+    } else {
+      d.data.forEach(row => { byH[row.h] = row; });
+    }
+
     for (let h = 0; h < 24; h++) {
       labels.push(`${String(h).padStart(2,'0')}:00`);
       pkwData.push(byH[h] ? byH[h].pkw : 0);

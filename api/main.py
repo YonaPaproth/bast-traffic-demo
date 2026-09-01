@@ -262,7 +262,7 @@ def get_traffic_states():
 
 _PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
 
-_BEDROCK_MODEL = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+_BEDROCK_MODEL = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
 _BEDROCK_SYSTEM = f"""You are a data analyst assistant for BASt (German Federal Highway Research Institute).
 Help users explore German highway traffic data from January 2026.

@@ -361,7 +361,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <td class="compare-val good"><span class="pip pip-green"></span>Apache Superset + Claude text-to-SQL</td>
  <td class="compare-val good"><span class="pip pip-green"></span>Power BI DirectQuery</td>
  <td class="compare-val good"><span class="pip pip-green"></span>Power BI natively integrated</td>
- <td class="compare-val warn"><span class="pip pip-yellow"></span>Custom React/Plotly dashboard only</td>
+ <td class="compare-val good"><span class="pip pip-green"></span>Plotly dashboard + Claude Bedrock chat (text-to-SQL, streaming)</td>
  </tr>
  <tr>
  <td>Time Travel</td>
@@ -652,8 +652,8 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
   <div class="tag tag-purple" style="margin-bottom:0;">Option D · This Demo — PoC Entry Point</div>
   <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;background:#A100FF;color:#fff;padding:3px 10px;border-radius:2px;">THIS DEMO</span>
  </div>
- <h2>Step 1: Prove It — The Fastest Path from Data to Insight</h2>
- <p class="lead">Zero cluster operations. Near-zero cost. Demonstrable in one day. Not production-grade — but proof that the architecture works. This demo is Option D.</p>
+ <h2>Step 1: Prove It — Live Serverless API + AI Chat Agent</h2>
+ <p class="lead">ECS Fargate backend with live DuckDB queries to S3 Parquet. HTTPS via CloudFront. Bedrock Claude chat agent with text-to-SQL. Deployed in hours via GitHub Actions CI/CD. ~€40–60/month.</p>
 
  <!-- "You are here" callout -->
  <div style="margin-top:20px;margin-bottom:24px;padding:16px 20px;background:#fdf5ff;border:2px solid #A100FF;border-radius:6px;display:flex;align-items:flex-start;gap:12px;">
@@ -661,7 +661,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
   <div>
    <div style="font-size:14px;font-weight:700;color:#A100FF;margin-bottom:4px;">You are looking at Option D right now.</div>
    <div style="font-size:13px;color:#333;line-height:1.6;">
-    The dashboard at <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html" style="color:#A100FF;font-weight:600;">bast-traffic-demo on S3</a> was built from raw BASt open data in one day using this exact stack.
+    The live demo runs FastAPI on ECS Fargate behind CloudFront HTTPS. The purple chat button queries Claude via Amazon Bedrock — live text-to-SQL against 569M vehicle records on S3. Built end-to-end with Claude Code as the engineering agent; deployed via GitHub Actions.
    </div>
   </div>
  </div>
@@ -671,7 +671,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-box">
  <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></span>
  <div class="label">BASt Open Data</div>
- <div class="sub">CSV/ZIP files<br>Public download</div>
+ <div class="sub">CSV/ZIP files<br>Public download<br>Jan–Jun 2026</div>
  <span class="tech">CSV / ZIP</span>
  </div>
  </div>
@@ -680,7 +680,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-box">
  <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="19" y1="12" x2="5" y2="12"/></svg></span>
  <div class="label">Python Parser</div>
- <div class="sub">Manual script<br>scripts/parse_bast.py<br>Local execution</div>
+ <div class="sub">scripts/parse_bast.py<br>→ Parquet on S3<br>PyIceberg v2 catalog</div>
  <span class="tech">Python 3.11</span>
  </div>
  </div>
@@ -689,35 +689,44 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <div class="arch-box">
  <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19.5 6.5 19.5 17.5 12 22 4.5 17.5 4.5 6.5 12 2"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="4.5" y1="6.5" x2="19.5" y2="17.5"/><line x1="19.5" y1="6.5" x2="4.5" y2="17.5"/></svg></span>
  <div class="label">Apache Iceberg v2</div>
- <div class="sub">Local Parquet → S3<br>PyIceberg + SQLite catalog<br>ACID · Time Travel</div>
+ <div class="sub">Parquet on S3<br>ACID · Time Travel<br>569M vehicles</div>
  <span class="tech">PyIceberg v0.7</span>
  </div>
  </div>
  <div class="arch-arrow">→</div>
- <div class="arch-step">
+ <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="14" rx="7" ry="5"/><circle cx="16" cy="9" r="3"/><path d="M19 9h2v2h-2z"/></svg></span>
- <div class="label">DuckDB</div>
- <div class="sub">Local query engine<br>SQL on Parquet/S3<br>In-process analytics</div>
- <span class="tech">DuckDB 1.x</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+ <div class="label">FastAPI · ECS Fargate</div>
+ <div class="sub">DuckDB httpfs → S3<br>Live queries, no cluster<br>GitHub Actions CI/CD</div>
+ <span class="tech">Fargate / DuckDB</span>
  </div>
  </div>
  <div class="arch-arrow">→</div>
- <div class="arch-step">
+ <div class="arch-step highlight">
  <div class="arch-box">
- <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
- <div class="label">FastAPI + S3</div>
- <div class="sub">Pre-aggregated JSON<br>→ S3 static hosting<br>No server at runtime</div>
- <span class="tech">FastAPI / S3</span>
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="4" r="1"/><path d="M7 13h.01M17 13h.01M9 17h6"/></svg></span>
+ <div class="label">Claude · Bedrock</div>
+ <div class="sub">Natural language → SQL<br>Streaming SSE answers<br>Text-to-SQL agent</div>
+ <span class="tech">Bedrock Converse API</span>
+ </div>
+ </div>
+ <div class="arch-arrow">→</div>
+ <div class="arch-step highlight">
+ <div class="arch-box">
+ <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 2 3 6 3 11c0 5 4 11 9 11s9-6 9-11C21 6 17 2 12 2z"/><path d="M3 11h18"/></svg></span>
+ <div class="label">ALB · CloudFront</div>
+ <div class="sub">Stable HTTPS endpoint<br>Zero-downtime deploys<br>Global CDN</div>
+ <span class="tech">ALB + CloudFront</span>
  </div>
  </div>
  <div class="arch-arrow">→</div>
  <div class="arch-step highlight">
  <div class="arch-box">
  <span class="icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
- <div class="label">React + Plotly</div>
- <div class="sub">CDN-only dashboard<br>S3 static hosting<br>This page ↑</div>
- <span class="tech">CDN-only</span>
+ <div class="label">Plotly · Chat UI</div>
+ <div class="sub">S3 static hosting<br>Live API + chat panel<br>HTTPS dashboard</div>
+ <span class="tech">Plotly / S3</span>
  </div>
  </div>
  </div>
@@ -732,7 +741,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  </div>
  <div class="layer layer-silver">
   <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M8 15h8"/><path d="M15 9a4 4 0 100 8"/></svg></span> Cost</div>
-  <div class="layer-desc"><strong>~€5/month</strong> (S3 storage only). Zero compute at runtime — data is pre-aggregated and served as static JSON. The cheapest possible production artifact that proves the architecture concept.</div>
+  <div class="layer-desc"><strong>~€40–60/month</strong>: Fargate 0.5 vCPU (~€20), ALB (~€18), CloudFront (~€5), S3 (~€5), Bedrock pay-per-token (usage-based). No cluster, no reserved capacity — pure serverless. At low demo traffic, real cost is closer to €30/month.</div>
  </div>
  <div class="layer layer-gold">
   <div class="layer-label"><span class="layer-icon"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 19.5 6.5 19.5 17.5 12 22 4.5 17.5 4.5 6.5 12 2"/></svg></span> Real Iceberg</div>
@@ -759,11 +768,11 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  </tr>
  </thead>
  <tbody>
- <tr><td>Compute</td><td class="compare-val good">€0 (pre-aggregated static)</td><td class="compare-val good">~€150 (Athena + Trino, pay-per-query)</td><td class="compare-val warn">~€800/month</td></tr>
+ <tr><td>Compute</td><td class="compare-val good">~€20/mo (Fargate 0.5 vCPU)</td><td class="compare-val good">~€150 (Athena + Trino, pay-per-query)</td><td class="compare-val warn">~€800/month</td></tr>
  <tr><td>Catalog / Governance</td><td class="compare-val warn">SQLite (local only)</td><td class="compare-val good">~€0 (Nessie OSS) or Lake Formation</td><td class="compare-val warn">Unity Catalog (included in license)</td></tr>
- <tr><td>BI / Frontend</td><td class="compare-val good">React/Plotly — free</td><td class="compare-val good">Superset OSS / React — free</td><td class="compare-val warn">PBI Premium ~€5,000/month</td></tr>
- <tr><td>Storage</td><td class="compare-val good">~€5/month (S3 only)</td><td class="compare-val good">~€50–100/month (S3 at scale)</td><td class="compare-val warn">Included in DBU costs</td></tr>
- <tr><td><strong>Total infrastructure</strong></td><td class="compare-val good"><strong>~€5/month</strong></td><td class="compare-val good"><strong>~€200–400/month</strong></td><td class="compare-val warn"><strong>~€6,000/month</strong></td></tr>
+ <tr><td>BI / Frontend</td><td class="compare-val good">Plotly dashboard + Claude chat (Bedrock)</td><td class="compare-val good">Superset OSS / React — free</td><td class="compare-val warn">PBI Premium ~€5,000/month</td></tr>
+ <tr><td>Storage</td><td class="compare-val good">~€5/month (S3 + CloudFront + ALB)</td><td class="compare-val good">~€50–100/month (S3 at scale)</td><td class="compare-val warn">Included in DBU costs</td></tr>
+ <tr><td><strong>Total infrastructure</strong></td><td class="compare-val good"><strong>~€40–60/month</strong></td><td class="compare-val good"><strong>~€200–400/month</strong></td><td class="compare-val warn"><strong>~€6,000/month</strong></td></tr>
  <tr><td>Performance Gap vs. Databricks</td><td class="compare-val bad">Single-node, limited</td><td class="compare-val good"><strong>&lt;10%</strong> on typical analytics queries</td><td>Reference</td></tr>
  </tbody>
  </table>
@@ -925,7 +934,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
 
 <footer>
  <span>BASt Traffic Data Demo · Architecture Documentation · Open Data · January 2026</span>
- <span>Stack: PyIceberg · DuckDB · FastAPI · AWS S3 · Plotly · Tailwind CSS</span>
+ <span>Stack: PyIceberg · DuckDB · FastAPI · ECS Fargate · ALB · CloudFront · Bedrock Claude · AWS S3 · Plotly · GitHub Actions</span>
  </footer>
 
 </div>

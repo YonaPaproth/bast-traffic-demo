@@ -365,8 +365,15 @@ const PURPLE_SHADES = [
 
 // ── Overview ──────────────────────────────────────────
 async function loadOverview() {
- const r = await fetch(`${API_BASE}/api/traffic/overview`);
+ const [r, rs] = await Promise.all([
+   fetch(`${API_BASE}/api/traffic/overview`),
+   fetch(`${API_BASE}/api/traffic/states`),
+ ]);
  const d = await r.json();
+ d.states = await rs.json();
+ // API returns total_kfz; normalise to kfz_total for chart compatibility
+ (d.top10_stations || []).forEach(s => { s.kfz_total = s.total_kfz; });
+ (d.states || []).forEach(s => { s.kfz_total = s.total_kfz; });
 
  const wdayVals = d.daily_totals.filter((_, i) => i > 0 && i < 6).map(r => r.kfz_total);
  const weVals = [d.daily_totals[0], d.daily_totals[6]].map(r => r.kfz_total);

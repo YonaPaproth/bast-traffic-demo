@@ -68,7 +68,7 @@ jobs:
             aws ecs create-service \
               --cluster $ECS_CLUSTER \
               --service-name $ECS_SERVICE \
-              --task-definition bast-api \
+              --task-definition bast-api:2 \
               --desired-count 1 \
               --launch-type FARGATE \
               --network-configuration "awsvpcConfiguration={subnets=[subnet-08b5e63bdcb89e06e,subnet-09af606f69c1812a1],securityGroups=[sg-01ff08b4fe827a889],assignPublicIp=ENABLED}"

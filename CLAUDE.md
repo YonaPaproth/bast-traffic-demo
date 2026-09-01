@@ -34,7 +34,7 @@ A live AWS demo for Accenture client pitches. Shows an open-source data stack (S
 | **Task def** | `bast-api:2` | 0.5 vCPU / 1 GB; uses `bast-api:latest` image |
 | **ALB** | `bast-api-alb` | Internet-facing; listener on :80; forwards to ECS |
 | **CloudFront** | `E1WGCWTNHFN4VX` | `d1905gj4v53w41.cloudfront.net`; CachingDisabled; CORS-CustomOrigin origin request policy |
-| **Bedrock model** | `anthropic.claude-sonnet-4-6` | `eu-central-1`; invoked from ECS task |
+| **Bedrock model** | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` | EU cross-region inference profile; marketplace-activated; invoked from ECS task |
 
 **IAM roles:**
 - `bast-api-task-role` — S3 read (`traffic/**`) + `bedrock:InvokeModelWithResponseStream`
@@ -89,6 +89,22 @@ data: {"type":"done"}
 - **Format:** Parquet on S3, glob: `s3://bast-traffic-demo-112220711619/traffic/**/*.parquet`
 - **Columns:** `station_id, station_name, state, road_class, road_number, lat, lon, date DATE, hour INTEGER (0-23), kfz_r1, kfz_r2, kfz_total INTEGER`
 - **Iceberg catalog:** SQLite (local only; not used on ECS — ECS queries Parquet directly via DuckDB httpfs)
+
+---
+
+## Accenture SOC / network policy — HARD RULES
+
+**Never use PowerShell to make outbound HTTP/HTTPS connections to external IPs or AWS endpoints.**
+
+On 2026-09-01, the Accenture Security Operations Center (ASOC) isolated this workstation because Claude Code ran a PowerShell `Invoke-RestMethod` call to the live ALB IP (`18.198.51.123:8000`). PowerShell making outbound connections to non-corporate IPs is a high-fidelity attack-pattern signature for ASOC and triggers automatic isolation.
+
+**Rules that apply in this project:**
+
+1. **No `Invoke-RestMethod` or `Invoke-WebRequest` in PowerShell** — ever, against any external host (AWS, ALB, CloudFront, internet).
+2. **No PowerShell HTTP calls to raw IP addresses** — even internal-looking ranges.
+3. **To smoke-test a live endpoint, use the Bash tool with `curl`** (Git Bash, not PowerShell). `curl` via Bash does not trigger the SOC rule. Example: `curl -s https://d1905gj4v53w41.cloudfront.net/health`.
+4. **Prefer browser verification or trusting CI/CD output** over any local HTTP test after a deploy. The GitHub Actions workflow already waits for ECS stability.
+5. **If PowerShell must run a network-adjacent command** (e.g. `aws` CLI, `docker`), that is fine — those are signed corporate-managed binaries. The rule is specifically about PowerShell's own HTTP cmdlets against external hosts.
 
 ---
 

@@ -2,11 +2,19 @@
 """
 parse_bast.py — Parse BASt Bestandsbandformat traffic counting data.
 
-Reads all station files from data/raw/DZ_2026_01_Rohdaten/, joins with metadata,
-and writes partitioned Parquet to data/parquet/year=2026/month=01/traffic.parquet.
+Usage:
+  python parse_bast.py [YYYY_MM]          e.g. 2026_01  (default: 2026_01)
+
+Reads all station files from data/raw/DZ_<YYYY_MM>_Rohdaten/, joins with
+metadata, and writes partitioned Parquet to
+data/parquet/year=<YYYY>/month=<MM>/traffic.parquet.
+
+After parsing, upload to S3:
+  aws s3 cp data/parquet/year=<YYYY>/month=<MM>/traffic.parquet \
+    s3://bast-traffic-demo-112220711619/traffic/year=<YYYY>/month=<MM>/traffic.parquet \
+    --profile claude-code
 """
 
-import os
 import re
 import sys
 import time
@@ -18,9 +26,12 @@ import pyarrow.parquet as pq
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
-RAW_DIR = BASE_DIR / "data" / "raw" / "DZ_2026_01_Rohdaten"
-PARQUET_DIR = BASE_DIR / "data" / "parquet" / "year=2026" / "month=01"
-METADATA_CSV = RAW_DIR / "_DZ_2026_01_Metadaten.csv"
+
+_MONTH_ARG = sys.argv[1] if len(sys.argv) > 1 else "2026_01"
+_YEAR, _MON = _MONTH_ARG.split("_")
+RAW_DIR    = BASE_DIR / "data" / "raw" / f"DZ_{_MONTH_ARG}_Rohdaten"
+PARQUET_DIR = BASE_DIR / "data" / "parquet" / f"year={_YEAR}" / f"month={_MON}"
+METADATA_CSV = RAW_DIR / f"_DZ_{_MONTH_ARG}_Metadaten.csv"
 
 # ── Regex ──────────────────────────────────────────────────────────────────────
 DATA_LINE_RE = re.compile(r"^(\d{6})\s+(\d{2}):(\d{2})\s+(.+)$")

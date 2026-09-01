@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BASt Traffic — Germany, Jan–Jun 2026</title>
+<title>BASt Traffic — Germany 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -157,7 +157,7 @@
  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
  <div style="margin-bottom:32px;">
  <div class="divider-purple"></div>
- <div class="section-label">Overview Jan–Jun 2026</div>
+ <div class="section-label" id="overview-label">Overview</div>
  <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Traffic Statistics</h2>
  </div>
  <div id="kpi-section" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
@@ -197,7 +197,7 @@
  <div class="chart-container">
  <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
  <div class="chart-title">Vehicles / Day — All Stations</div>
- <div class="chart-subtitle">Jan–Jun 2026 · All Permanent Counting Stations</div>
+ <div class="chart-subtitle" id="daily-subtitle">Loading…</div>
  </div>
  <div id="chart-daily" style="width:100%;"></div>
  </div>
@@ -321,7 +321,7 @@
  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
  <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
  <div style="font-size:13px;color:#505050;">
- Data source: <strong style="color:#000;">Federal Highway Research Institute (BASt)</strong> · Open Data · Jan–Jun 2026
+ Data source: <strong style="color:#000;">Federal Highway Research Institute (BASt)</strong> · Open Data · 2026
  </div>
  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
  <span style="font-size:11px;font-weight:600;color:#A100FF;letter-spacing:0.05em;">AWS S3</span>
@@ -408,8 +408,18 @@ async function loadOverview() {
  const wdayAvg = wdayVals.reduce((a, b) => a + b, 0) / Math.max(wdayVals.length, 1);
  const weAvg = weVals.reduce((a, b) => a + b, 0) / Math.max(weVals.length, 1);
 
+ // Derive date range from actual data
+ const fmtDate = s => { const d = new Date(s); return d.toLocaleDateString('en-GB', {month:'short', year:'numeric'}); };
+ const dateFirst = d.daily_totals[0]?.date;
+ const dateLast  = d.daily_totals[d.daily_totals.length - 1]?.date;
+ const dateRange = dateFirst ? (fmtDate(dateFirst) === fmtDate(dateLast) ? fmtDate(dateFirst) : `${fmtDate(dateFirst)} – ${fmtDate(dateLast)}`) : '';
+ if (dateRange) {
+   document.getElementById('overview-label').textContent = `Overview ${dateRange}`;
+   document.getElementById('daily-subtitle').textContent = `${dateRange} · All Permanent Counting Stations`;
+ }
+
  document.getElementById('kpi-section').innerHTML = [
- kpiCard(fmt(d.kpis.total_vehicles), 'Total Vehicles', d.kpis.months_covered || 'Jan–Jun 2026'),
+ kpiCard(fmt(d.kpis.total_vehicles), 'Total Vehicles', dateRange || 'Jan 2026'),
  kpiCard(Math.round(d.kpis.num_stations).toLocaleString('en-US'), 'Counting Stations', 'active permanent counting stations'),
  kpiCard(fmt(wdayAvg), 'Avg. Weekday Traffic', 'Monday – Friday'),
  kpiCard(fmt(weAvg), 'Avg. Weekend Traffic', 'Saturday + Sunday'),

@@ -243,12 +243,13 @@
  <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
  <div>
  <div class="chart-title">Hourly Profile by Station</div>
- <div class="chart-subtitle">Monthly Average · Average Daily Pattern</div>
+ <div class="chart-subtitle">Live API · Select station and date</div>
  </div>
- <div style="position:relative;min-width:280px;">
- <select id="station-select" class="styled" style="width:100%;">
+ <div style="display:flex;gap:10px;flex-wrap:wrap;min-width:280px;">
+ <select id="station-select" class="styled" style="flex:1;min-width:200px;">
  <option>Loading stations…</option>
  </select>
+ <input id="hourly-date" type="date" class="styled" value="2026-01-15" min="2026-01-01" max="2026-01-31" style="width:140px;">
  </div>
  </div>
  <div id="chart-hourly" style="width:100%;position:relative;height:320px;"><canvas id="canvas-hourly" style="width:100%;height:100%;"></canvas></div>
@@ -311,6 +312,7 @@
 
 <script>
 const BASE = 'https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/data';
+const API_BASE = 'https://d1905gj4v53w41.cloudfront.net';
 
 // ── Plotly base layout (light theme) ─────────────────
 const LAYOUT_BASE = {
@@ -363,7 +365,7 @@ const PURPLE_SHADES = [
 
 // ── Overview ──────────────────────────────────────────
 async function loadOverview() {
- const r = await fetch(`${BASE}/overview.json`);
+ const r = await fetch(`${API_BASE}/api/traffic/overview`);
  const d = await r.json();
 
  const wdayVals = d.daily_totals.filter((_, i) => i > 0 && i < 6).map(r => r.kfz_total);
@@ -450,14 +452,16 @@ async function loadOverview() {
 
 // ── Stations dropdown ─────────────────────────────────
 async function loadStations() {
- const r = await fetch(`${BASE}/stations.json`);
+ const r = await fetch(`${API_BASE}/api/stations`);
  const d = await r.json();
  const sel = document.getElementById('station-select');
- sel.innerHTML = d.stations.map(s =>
+ sel.innerHTML = d.map(s =>
  `<option value="${s.station_id}">${s.station_name || s.station_id} · ${s.state || '?'} · ${s.road_class || ''}${s.road_number || ''}</option>`
  ).join('');
  sel.addEventListener('change', () => loadHourly(sel.value));
- if (d.stations.length) loadHourly(d.stations[0].station_id);
+ const dateInput = document.getElementById('hourly-date');
+ if (dateInput) dateInput.addEventListener('change', () => loadHourly(sel.value));
+ if (d.length) loadHourly(d[0].station_id);
 }
 
 // ── Hourly profile ────────────────────────────────────
@@ -467,40 +471,24 @@ async function loadHourly(stationId) {
   const container = document.getElementById('chart-hourly');
   container.innerHTML = `<canvas id="canvas-hourly" style="width:100%;height:100%;"></canvas>`;
 
+  const dateInput = document.getElementById('hourly-date');
+  const date = dateInput ? dateInput.value : '2026-01-15';
+
   try {
-    const r = await fetch(`${BASE}/hourly/${stationId}.json?t=${Date.now()}`);
-    const d = await r.json();
+    const r = await fetch(`${API_BASE}/api/traffic/hourly?station_id=${stationId}&date=${date}`);
+    const rows = await r.json();
 
     const labels = [];
-    const pkwData = [];
-    const lkwData = [];
+    const r1Data = [];
+    const r2Data = [];
 
-    // Detect format: pre-aggregated {h, pkw, lkw} or raw {date, hour, kfz_total, pkw, lkw}
-    const isRaw = d.data[0] && d.data[0].date !== undefined;
     const byH = {};
-    if (isRaw) {
-      // Aggregate raw rows: weekdays only, average per hour
-      const acc = {};
-      d.data.forEach(row => {
-        const dt = new Date(row.date + 'T00:00:00Z');
-        if (dt.getUTCDay() === 0 || dt.getUTCDay() === 6) return;
-        const h = (row.hour || 0) % 24;
-        if (!acc[h]) acc[h] = {pkw: 0, lkw: 0, n: 0};
-        acc[h].pkw += (row.pkw || 0);
-        acc[h].lkw += (row.lkw || row.kfz_total - row.pkw || 0);
-        acc[h].n++;
-      });
-      for (let h = 0; h < 24; h++) {
-        byH[h] = acc[h] ? {pkw: Math.round(acc[h].pkw / acc[h].n), lkw: Math.round(acc[h].lkw / acc[h].n)} : {pkw: 0, lkw: 0};
-      }
-    } else {
-      d.data.forEach(row => { byH[row.h] = row; });
-    }
+    rows.forEach(row => { byH[row.hour] = row; });
 
     for (let h = 0; h < 24; h++) {
       labels.push(`${String(h).padStart(2,'0')}:00`);
-      pkwData.push(byH[h] ? byH[h].pkw : 0);
-      lkwData.push(byH[h] ? byH[h].lkw : 0);
+      r1Data.push(byH[h] ? byH[h].kfz_r1 : 0);
+      r2Data.push(byH[h] ? byH[h].kfz_r2 : 0);
     }
 
     if (_hourlyChart) { _hourlyChart.destroy(); _hourlyChart = null; }
@@ -512,8 +500,8 @@ async function loadHourly(stationId) {
         labels,
         datasets: [
           {
-            label: 'PKW (cars)',
-            data: pkwData,
+            label: 'Direction 1',
+            data: r1Data,
             borderColor: '#A100FF',
             backgroundColor: 'rgba(161,0,255,0.07)',
             borderWidth: 2.5,
@@ -523,8 +511,8 @@ async function loadHourly(stationId) {
             fill: true,
           },
           {
-            label: 'LKW (trucks)',
-            data: lkwData,
+            label: 'Direction 2',
+            data: r2Data,
             borderColor: '#d29922',
             backgroundColor: 'transparent',
             borderWidth: 2,
@@ -552,7 +540,7 @@ async function loadHourly(stationId) {
               font: { size: 10 }, color: '#707070',
               callback: v => v.toLocaleString('en')
             },
-            title: { display: true, text: 'Avg Vehicles/h (Mon–Fri)', font: { size: 10 }, color: '#707070' }
+            title: { display: true, text: 'Vehicles / hour', font: { size: 10 }, color: '#707070' }
           }
         },
         plugins: {
@@ -566,7 +554,7 @@ async function loadHourly(stationId) {
       }
     });
   } catch(e) {
-    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No hourly data available</div>';
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No data for this station and date.</div>';
   }
 }
 
@@ -586,8 +574,10 @@ const _mapObserver = new IntersectionObserver((entries) => {
 _mapObserver.observe(document.getElementById('map-chart'));
 
 async function loadMap() {
- const r = await fetch(`${BASE}/stations_map.json`);
+ const r = await fetch(`${API_BASE}/api/stations`);
  const stations = await r.json();
+ // API returns total_kfz; normalise to kfz_total for map rendering
+ stations.forEach(s => { s.kfz_total = s.total_kfz; });
  _mapData = stations;
 
  const max = Math.max(...stations.map(s => s.kfz_total));

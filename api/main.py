@@ -309,10 +309,6 @@ _BEDROCK_TOOLS = [
 ]
 
 
-class AskRequest(BaseModel):
-    question: str
-
-
 def _ask_stream(question: str):
     """Sync generator that drives the Bedrock converse_stream agentic loop."""
     bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)

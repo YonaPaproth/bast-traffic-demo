@@ -1,6 +1,14 @@
 # Architecture Review — BASt Traffic Demo
 *Reviewed: 2026-08-29 | Reviewer: Claude Sonnet (via Dobby/OpenClaw)*
 
+> **Status as of 2026-09-01:** The three main gaps identified here have been addressed:
+> - Gap 3 ("FastAPI runs locally") → **Fixed:** FastAPI is live on ECS Fargate behind ALB + CloudFront
+> - Missing killer feature ("/ask endpoint") → **Built:** Claude Bedrock chat agent with streaming SSE text-to-SQL is live
+> - Weakness 2 ("AI Agents unimplemented") → **Implemented:** `/api/ask?q=` endpoint with agentic DuckDB tool loop
+>
+> Remaining open gaps: Iceberg SQLite catalog (Gap 1), no orchestration (Gap 2), Trino/Nessie not yet deployed.
+> See BACKLOG.md for current state and next steps.
+
 ---
 
 ## 1. Architecture Soundness (PoC) — Top 3 Production Gaps

@@ -58,10 +58,11 @@ jobs:
             --query 'services[0].status' --output text 2>/dev/null || echo "MISSING")
 
           if [ "$STATUS" = "ACTIVE" ]; then
-            echo "Service exists — forcing new deployment"
+            echo "Service exists — updating task definition and forcing new deployment"
             aws ecs update-service \
               --cluster $ECS_CLUSTER \
               --service $ECS_SERVICE \
+              --task-definition bast-api:2 \
               --force-new-deployment
           else
             echo "Creating service for the first time"

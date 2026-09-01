@@ -311,16 +311,27 @@ _BEDROCK_TOOLS = [
 
 def _ask_stream(question: str):
     """Sync generator that drives the Bedrock converse_stream agentic loop."""
-    bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+    try:
+        bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+    except Exception as exc:
+        yield f'data: {json.dumps({"type": "error", "message": f"Bedrock client init failed: {exc}"})}\n\n'
+        yield f'data: {json.dumps({"type": "done"})}\n\n'
+        return
+
     messages = [{"role": "user", "content": [{"text": question}]}]
 
     while True:
-        response = bedrock.converse_stream(
-            modelId=_BEDROCK_MODEL,
-            system=[{"text": _BEDROCK_SYSTEM}],
-            messages=messages,
-            toolConfig={"tools": _BEDROCK_TOOLS},
-        )
+        try:
+            response = bedrock.converse_stream(
+                modelId=_BEDROCK_MODEL,
+                system=[{"text": _BEDROCK_SYSTEM}],
+                messages=messages,
+                toolConfig={"tools": _BEDROCK_TOOLS},
+            )
+        except Exception as exc:
+            yield f'data: {json.dumps({"type": "error", "message": str(exc)})}\n\n'
+            yield f'data: {json.dumps({"type": "done"})}\n\n'
+            return
 
         assistant_blocks = []
         current_text = ""

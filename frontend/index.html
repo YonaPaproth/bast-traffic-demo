@@ -753,6 +753,9 @@ async function sendChat() {
           if (evt.type === 'text') {
             fullText += evt.delta;
             aDiv.textContent = fullText;
+          } else if (evt.type === 'error') {
+            fullText = 'Error: ' + evt.message;
+            aDiv.textContent = fullText;
           } else if (evt.type === 'tool_start') {
             aDiv.textContent = fullText || 'Querying data…';
           } else if (evt.type === 'tool_running') {

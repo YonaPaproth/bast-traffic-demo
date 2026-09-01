@@ -258,6 +258,41 @@ def get_traffic_states():
         con.close()
 
 
+# ── Average hourly pattern ────────────────────────────────────────────────────
+
+@app.get("/api/traffic/hourly-pattern")
+def get_hourly_pattern(
+    month: str = Query("2026-06", description="Month as YYYY-MM, e.g. 2026-06"),
+):
+    """Average vehicles per hour-of-day across all stations for a given month."""
+    try:
+        year, mon = month.split("-")
+        int(year); int(mon)
+    except Exception:
+        raise HTTPException(status_code=400, detail="month must be YYYY-MM")
+    con = get_con()
+    try:
+        df = con.execute(f"""
+            SELECT
+                hour,
+                ROUND(AVG(kfz_total), 0) AS avg_kfz
+            FROM {parquet_source()}
+            WHERE YEAR(date::DATE) = {int(year)}
+              AND MONTH(date::DATE) = {int(mon)}
+            GROUP BY hour
+            ORDER BY hour
+        """).df()
+        if df.empty:
+            raise HTTPException(status_code=404, detail=f"No data for {month}")
+        return df.to_dict(orient="records")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        con.close()
+
+
 # ── Bedrock chat ──────────────────────────────────────────────────────────────
 
 _PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"

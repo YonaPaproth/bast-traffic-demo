@@ -257,6 +257,34 @@
  </div>
  </section>
 
+ <!-- ─── Average Daily Pattern ──────────── -->
+ <section style="background:#fff;padding:48px 0;">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+ <div>
+ <div class="divider-purple"></div>
+ <div class="section-label">Temporal Pattern</div>
+ <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Average Daily Pattern</h2>
+ </div>
+ <select id="pattern-month" class="styled" style="min-width:160px;" onchange="loadHourlyPattern(this.value)">
+ <option value="2026-06">June 2026</option>
+ <option value="2026-05">May 2026</option>
+ <option value="2026-04">April 2026</option>
+ <option value="2026-03">March 2026</option>
+ <option value="2026-02">February 2026</option>
+ <option value="2026-01">January 2026</option>
+ </select>
+ </div>
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+ <div class="chart-title">Avg. Vehicles / Hour — All Stations</div>
+ <div id="pattern-subtitle" class="chart-subtitle">June 2026 · Average across all 1,832 counting stations</div>
+ </div>
+ <div id="chart-pattern" style="width:100%;"></div>
+ </div>
+ </div>
+ </section>
+
  <!-- ─── Map Section ───────────────────── -->
  <section style="background:#f7f7f7;padding:48px 0;">
  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
@@ -565,8 +593,58 @@ async function loadHourly(stationId) {
   }
 }
 
+// ── Average daily pattern ─────────────────────────────
+const MONTH_LABELS = {
+  '2026-01':'January 2026','2026-02':'February 2026','2026-03':'March 2026',
+  '2026-04':'April 2026','2026-05':'May 2026','2026-06':'June 2026',
+};
+
+async function loadHourlyPattern(month) {
+  month = month || '2026-06';
+  document.getElementById('pattern-subtitle').textContent =
+    `${MONTH_LABELS[month] || month} · Average across all 1,832 counting stations`;
+  try {
+    const r = await fetch(`${API_BASE}/api/traffic/hourly-pattern?month=${month}`);
+    const rows = await r.json();
+    const byH = {};
+    rows.forEach(row => { byH[row.hour] = row.avg_kfz; });
+    const hours = Array.from({length: 24}, (_, h) => h);
+    const vals  = hours.map(h => byH[h] ?? 0);
+    const labels = hours.map(h => `${String(h).padStart(2,'0')}:00`);
+
+    // colour bars by value (darker = more traffic)
+    const max = Math.max(...vals);
+    const barColors = vals.map(v => {
+      const t = max > 0 ? v / max : 0;
+      const r = Math.round(161 + (80 - 161) * t);
+      const g = Math.round(0);
+      const b = Math.round(255);
+      return `rgba(${r},${g},${b},${0.35 + 0.65 * t})`;
+    });
+
+    Plotly.react('chart-pattern', [{
+      x: labels,
+      y: vals,
+      type: 'bar',
+      marker: { color: barColors, line: { width: 0 } },
+      hovertemplate: '<b>%{x}</b><br>Avg %{y:,.0f} vehicles/hour<extra></extra>',
+    }], {
+      ...LAYOUT_BASE,
+      height: 340,
+      margin: { t: 16, r: 24, b: 52, l: 80 },
+      bargap: 0.15,
+      yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f', title: { text: 'Avg vehicles / hour', font: { size: 11 }, standoff: 12 } },
+      xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10, color: '#505050' } },
+    }, { responsive: true, displayModeBar: false });
+  } catch(e) {
+    document.getElementById('chart-pattern').innerHTML =
+      '<div style="padding:40px;text-align:center;color:#888;font-size:13px;">Failed to load data.</div>';
+  }
+}
+
 loadOverview().catch(console.error);
 loadStations().catch(console.error);
+loadHourlyPattern('2026-06').catch(console.error);
 
 // ── MAP: lazy-load on scroll into view ────────────────────────────────────────
 let _mapData = null;

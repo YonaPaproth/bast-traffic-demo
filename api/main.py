@@ -1,8 +1,9 @@
 """
 main.py — BASt Traffic Demo FastAPI Backend
 
-Serves traffic data from local Parquet files via DuckDB.
-Now also exposes Apache Iceberg table metadata via PyIceberg.
+Serves traffic data from local Parquet files or S3 via DuckDB.
+Set PARQUET_S3_PATH env var to switch to S3 mode (used on ECS Fargate).
+Also exposes Apache Iceberg table metadata via PyIceberg (local mode only).
 """
 
 from pathlib import Path
@@ -15,9 +16,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
-PARQUET_GLOB = str(BASE_DIR / "data" / "parquet" / "**" / "*.parquet")
 ICEBERG_CATALOG_DB = str(BASE_DIR / "data" / "iceberg_catalog.db")
 ICEBERG_LOCAL_WAREHOUSE = str(BASE_DIR / "data" / "iceberg_local")
+
+# When running on ECS Fargate, PARQUET_S3_PATH points to S3.
+# Locally, falls back to the parquet directory.
+_S3_PATH = os.getenv("PARQUET_S3_PATH")
+_LOCAL_GLOB = str(BASE_DIR / "data" / "parquet" / "**" / "*.parquet")
+PARQUET_GLOB = _S3_PATH if _S3_PATH else _LOCAL_GLOB
+USE_S3 = bool(_S3_PATH)
+AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -36,8 +44,24 @@ app.add_middleware(
 
 
 def get_con() -> duckdb.DuckDBPyConnection:
-    """Return a fresh DuckDB in-memory connection."""
-    return duckdb.connect(database=":memory:")
+    """Return a DuckDB connection configured for local or S3 access."""
+    con = duckdb.connect(database=":memory:")
+    if USE_S3:
+        con.execute("INSTALL httpfs; LOAD httpfs")
+        # On ECS Fargate the task role is picked up automatically via the
+        # credential chain (ECS container metadata endpoint).
+        try:
+            con.execute(f"""
+                CREATE OR REPLACE SECRET aws_s3 (
+                    TYPE S3,
+                    PROVIDER CREDENTIAL_CHAIN,
+                    REGION '{AWS_REGION}'
+                )
+            """)
+        except Exception:
+            con.execute(f"SET s3_region='{AWS_REGION}'")
+            con.execute("SET s3_use_credential_chain=true")
+    return con
 
 
 def parquet_source() -> str:

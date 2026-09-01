@@ -1,0 +1,104 @@
+name: Build and Deploy API to ECS
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'api/**'
+      - 'Dockerfile'
+      - 'requirements.txt'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REGISTRY: 112220711619.dkr.ecr.eu-central-1.amazonaws.com
+  ECR_REPOSITORY: bast-api
+  ECS_CLUSTER: bast-cluster
+  ECS_SERVICE: bast-api-service
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # One-time: ensures the ECS service-linked role exists in the account
+      - name: Ensure ECS service-linked role exists
+        run: |
+          aws iam create-service-linked-role --aws-service-name ecs.amazonaws.com 2>/dev/null || true
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        run: |
+          TAG=${{ github.sha }}
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$TAG" >> $GITHUB_OUTPUT
+
+      - name: Create or update ECS service
+        run: |
+          STATUS=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query 'services[0].status' --output text 2>/dev/null || echo "MISSING")
+
+          if [ "$STATUS" = "ACTIVE" ]; then
+            echo "Service exists — forcing new deployment"
+            aws ecs update-service \
+              --cluster $ECS_CLUSTER \
+              --service $ECS_SERVICE \
+              --force-new-deployment
+          else
+            echo "Creating service for the first time"
+            aws ecs create-service \
+              --cluster $ECS_CLUSTER \
+              --service-name $ECS_SERVICE \
+              --task-definition bast-api \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[subnet-08b5e63bdcb89e06e,subnet-09af606f69c1812a1],securityGroups=[sg-01ff08b4fe827a889],assignPublicIp=ENABLED}"
+          fi
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE
+          echo "Service is stable."
+
+      - name: Print public IP
+        run: |
+          TASK_ARN=$(aws ecs list-tasks \
+            --cluster $ECS_CLUSTER \
+            --service-name $ECS_SERVICE \
+            --query 'taskArns[0]' --output text)
+
+          ENI_ID=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+            --output text)
+
+          PUBLIC_IP=$(aws ec2 describe-network-interfaces \
+            --network-interface-ids $ENI_ID \
+            --query 'NetworkInterfaces[0].Association.PublicIp' \
+            --output text)
+
+          echo "API is live at: http://$PUBLIC_IP:8000"
+          echo "Health check:  http://$PUBLIC_IP:8000/health"
+          echo "API docs:      http://$PUBLIC_IP:8000/docs"

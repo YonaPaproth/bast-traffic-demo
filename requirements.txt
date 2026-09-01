@@ -4,3 +4,4 @@ duckdb
 pandas
 pyarrow
 pyproj
+boto3

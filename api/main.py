@@ -9,10 +9,14 @@ Also exposes Apache Iceberg table metadata via PyIceberg (local mode only).
 from pathlib import Path
 from typing import Optional
 import os
+import json
 
+import boto3
 import duckdb
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
@@ -253,6 +257,164 @@ def get_traffic_states():
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         con.close()
+
+
+# ── Bedrock chat ──────────────────────────────────────────────────────────────
+
+_PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
+
+_BEDROCK_MODEL = "anthropic.claude-sonnet-4-6"
+
+_BEDROCK_SYSTEM = f"""You are a data analyst assistant for BASt (German Federal Highway Research Institute).
+Help users explore German highway traffic data from January 2026.
+1,832 counting stations, ~569 million vehicles, hourly granularity.
+
+DuckDB SQL data source — use this exact expression in FROM clauses:
+  {_PARQUET_EXPR}
+
+Columns:
+  station_id VARCHAR      -- unique ID e.g. 'BB3592'
+  station_name VARCHAR    -- human-readable name
+  state VARCHAR           -- 2-letter federal state: NW BY HE NI BW RP ST TH SN SH SL BB BE MV HH HB
+  road_class VARCHAR      -- 'A' (Autobahn) or 'B' (Bundesstrasse)
+  road_number VARCHAR     -- e.g. '1', '3', '61'
+  lat DOUBLE, lon DOUBLE
+  date DATE               -- 2026-01-01 to 2026-01-31
+  hour INTEGER            -- 0-23
+  kfz_r1 INTEGER          -- vehicles direction 1 per hour
+  kfz_r2 INTEGER          -- vehicles direction 2 per hour
+  kfz_total INTEGER       -- total both directions
+
+Always call execute_sql to fetch real data before answering.
+Add LIMIT 20 unless the user asks for more. Be concise and data-driven."""
+
+_BEDROCK_TOOLS = [
+    {
+        "toolSpec": {
+            "name": "execute_sql",
+            "description": "Run a DuckDB SQL query against the BASt traffic Parquet data. Returns up to 50 rows as JSON.",
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": f"DuckDB SQL. Use FROM {_PARQUET_EXPR} as the data source.",
+                        }
+                    },
+                    "required": ["query"],
+                }
+            },
+        }
+    }
+]
+
+
+class AskRequest(BaseModel):
+    question: str
+
+
+def _ask_stream(question: str):
+    """Sync generator that drives the Bedrock converse_stream agentic loop."""
+    bedrock = boto3.client("bedrock-runtime", region_name=AWS_REGION)
+    messages = [{"role": "user", "content": [{"text": question}]}]
+
+    while True:
+        response = bedrock.converse_stream(
+            modelId=_BEDROCK_MODEL,
+            system=[{"text": _BEDROCK_SYSTEM}],
+            messages=messages,
+            toolConfig={"tools": _BEDROCK_TOOLS},
+        )
+
+        assistant_blocks = []
+        current_text = ""
+        pending_tool = None
+        tool_input_raw = ""
+        stop_reason = None
+
+        for event in response["stream"]:
+            if "contentBlockStart" in event:
+                start = event["contentBlockStart"].get("start", {})
+                if "toolUse" in start:
+                    if current_text:
+                        assistant_blocks.append({"text": current_text})
+                        current_text = ""
+                    pending_tool = {
+                        "toolUseId": start["toolUse"]["toolUseId"],
+                        "name": start["toolUse"]["name"],
+                    }
+                    tool_input_raw = ""
+                    yield f'data: {json.dumps({"type": "tool_start", "name": pending_tool["name"]})}\n\n'
+
+            elif "contentBlockDelta" in event:
+                delta = event["contentBlockDelta"]["delta"]
+                if "text" in delta:
+                    current_text += delta["text"]
+                    yield f'data: {json.dumps({"type": "text", "delta": delta["text"]})}\n\n'
+                elif "toolUse" in delta:
+                    tool_input_raw += delta["toolUse"].get("input", "")
+
+            elif "contentBlockStop" in event:
+                if current_text:
+                    assistant_blocks.append({"text": current_text})
+                    current_text = ""
+                if pending_tool is not None:
+                    try:
+                        parsed = json.loads(tool_input_raw) if tool_input_raw else {}
+                    except Exception:
+                        parsed = {}
+                    assistant_blocks.append({
+                        "toolUse": {
+                            "toolUseId": pending_tool["toolUseId"],
+                            "name": pending_tool["name"],
+                            "input": parsed,
+                        }
+                    })
+                    pending_tool = None
+
+            elif "messageStop" in event:
+                stop_reason = event["messageStop"]["stopReason"]
+
+        messages.append({"role": "assistant", "content": assistant_blocks})
+
+        if stop_reason == "tool_use":
+            tool_results = []
+            for block in assistant_blocks:
+                if "toolUse" not in block:
+                    continue
+                tu = block["toolUse"]
+                if tu["name"] == "execute_sql":
+                    query = tu["input"].get("query", "")
+                    yield f'data: {json.dumps({"type": "tool_running", "query": query[:300]})}\n\n'
+                    try:
+                        con = get_con()
+                        df = con.execute(query).df()
+                        con.close()
+                        rows = json.loads(df.head(50).to_json(orient="records", date_format="iso"))
+                        result_text = json.dumps(rows)
+                    except Exception as exc:
+                        result_text = f"Error: {exc}"
+                    tool_results.append({
+                        "toolUseId": tu["toolUseId"],
+                        "content": [{"text": result_text}],
+                    })
+            messages.append({
+                "role": "user",
+                "content": [{"toolResult": tr} for tr in tool_results],
+            })
+        else:
+            yield f'data: {json.dumps({"type": "done"})}\n\n'
+            break
+
+
+@app.post("/api/ask")
+def ask(req: AskRequest):
+    return StreamingResponse(
+        _ask_stream(req.question),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Iceberg Metadata ──────────────────────────────────────────────────────────

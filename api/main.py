@@ -16,7 +16,6 @@ import duckdb
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
@@ -408,10 +407,10 @@ def _ask_stream(question: str):
             break
 
 
-@app.post("/api/ask")
-def ask(req: AskRequest):
+@app.get("/api/ask")
+def ask(q: str = Query(..., description="Natural language question about BASt traffic data")):
     return StreamingResponse(
-        _ask_stream(req.question),
+        _ask_stream(q),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

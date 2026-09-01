@@ -732,11 +732,7 @@ async function sendChat() {
   let fullText = '';
 
   try {
-    const resp = await fetch(`${API_BASE}/api/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
-    });
+    const resp = await fetch(`${API_BASE}/api/ask?q=${encodeURIComponent(question)}`);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
     const reader = resp.body.getReader();

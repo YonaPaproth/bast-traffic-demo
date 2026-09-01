@@ -317,7 +317,7 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <th style="background:#e5f5ee;color:#007040;">A · Full Open Source Stack<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">Trino + Nessie + Superset + Athena</span><br><span style="font-size:10px;background:#007040;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;">RECOMMENDED</span></th>
  <th>B · Databricks<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">SAP → S3 → Medallion → PBI</span></th>
  <th>C · Microsoft Fabric<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">SAP → ADF → Fabric → PBI</span></th>
- <th class="accent">D · This Demo<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">S3 + Iceberg + DuckDB</span><br><span style="font-size:10px;background:#A100FF;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;">THIS DEMO</span></th>
+ <th class="accent">D · This Demo<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">S3 + Iceberg + ECS Fargate + Bedrock</span><br><span style="font-size:10px;background:#A100FF;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;">THIS DEMO</span></th>
  </tr>
  </thead>
  <tbody>
@@ -326,14 +326,14 @@ footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; fon
  <td class="compare-val warn"><span class="pip pip-yellow"></span>Medium — DevOps expertise required</td>
  <td class="compare-val warn"><span class="pip pip-yellow"></span>Medium: Databricks expertise required</td>
  <td class="compare-val warn"><span class="pip pip-yellow"></span>Medium: M365 license prerequisite</td>
- <td class="compare-val good"><span class="pip pip-green"></span>Very low — Python + S3 only</td>
+ <td class="compare-val good"><span class="pip pip-green"></span>Low — ECS Fargate, S3, DuckDB, GitHub Actions</td>
  </tr>
  <tr>
  <td>Cost/Month</td>
  <td class="compare-val good"><span class="pip pip-green"></span>~€200–400/mo (pay-per-query)</td>
  <td class="compare-val warn"><span class="pip pip-yellow"></span>€500–5,000 (DBU costs)</td>
  <td class="compare-val warn"><span class="pip pip-yellow"></span>Fabric F64: ~€5,000/month</td>
- <td class="compare-val good"><span class="pip pip-green"></span>~€5/mo (S3 only)</td>
+ <td class="compare-val good"><span class="pip pip-green"></span>~€40–60/mo (Fargate + ALB + CloudFront + Bedrock)</td>
  </tr>
  <tr>
  <td>SAP Integration</td>

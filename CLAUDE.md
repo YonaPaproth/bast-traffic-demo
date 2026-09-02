@@ -6,7 +6,7 @@ Context file for Claude Code. Read this before touching anything.
 
 ## What this is
 
-A live AWS demo for Accenture client pitches. Shows an open-source data stack (S3 + Apache Iceberg + DuckDB + FastAPI) competing with Databricks/Fabric, plus a live Claude Bedrock chat agent doing text-to-SQL against ~569M vehicle records. Built entirely with Claude Code.
+A live AWS demo for Accenture client pitches. Shows an open-source data stack (S3 + Apache Iceberg + DuckDB + FastAPI) competing with Databricks/Fabric, plus a live Claude Bedrock chat agent doing text-to-SQL against ~3.58B vehicle records. Built entirely with Claude Code.
 
 ---
 
@@ -63,7 +63,7 @@ All served via CloudFront HTTPS (`https://d1905gj4v53w41.cloudfront.net`).
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/health` | Health check → `{"status":"ok"}` |
-| `GET` | `/api/stations` | All stations; flat array; fields include `total_kfz` |
+| `GET` | `/api/stations` | All stations; flat array; fields: `station_id, station_name, state, road_class, road_number, lat, lon, total_kfz` |
 | `GET` | `/api/traffic/overview` | KPIs + daily totals + top10_stations (field: `total_kfz`) |
 | `GET` | `/api/traffic/states` | Per-state totals (field: `total_kfz`) |
 | `GET` | `/api/traffic/hourly?station_id=&date=` | Hourly profile for one station/day |
@@ -85,10 +85,13 @@ data: {"type":"done"}
 ## Data
 
 - **Source:** BASt open data, Jan–Jun 2026 (6 months)
-- **Volume:** ~569M vehicle records, 1,832 counting stations
+- **Volume:** ~3.58B vehicle records, 1,943 counting stations, 181 days
 - **Format:** Parquet on S3, glob: `s3://bast-traffic-demo-112220711619/traffic/**/*.parquet`
 - **Columns:** `station_id, station_name, state, road_class, road_number, lat, lon, date DATE, hour INTEGER (0-23), kfz_r1, kfz_r2, kfz_total INTEGER`
 - **Iceberg catalog:** SQLite (local only; not used on ECS — ECS queries Parquet directly via DuckDB httpfs)
+- **Raw ZIPs on S3:** `s3://bast-traffic-demo-112220711619/raw/` — Feb–Jun ZIPs only; Jan ZIP not uploaded
+
+**kfz_r2 parsing bug (known, not yet fixed):** `parse_bast.py` reads `values[1]` as `kfz_r2`, but `values[1]` is the BASt quality indicator for Direction 1 — the real Direction 2 count is at `values[2]`. All `kfz_r2` values in current Parquet files are wrong. Direction 2 is hidden from the UI. Re-parse task is in BACKLOG.md Phase 2.
 
 ---
 
@@ -120,6 +123,12 @@ On 2026-09-01, the Accenture Security Operations Center (ASOC) isolated this wor
 
 5. **Task def version** — the workflow explicitly pins `bast-api:2`. If you register a new task def version, update both the `update-service` and `create-service` lines in `docker-deploy.yml`.
 
+6. **`/api/stations` scans January only** — to avoid OOM on the full 3.58B-row glob, the station metadata query reads only `year=2026/month=01/traffic.parquet`. Station attributes (name, state, road class, lat/lon) are stable across months. `total_kfz` in the response is `SUM(kfz_r1)` for January only — relative values are correct for map bubble sizing.
+
+7. **kfz_r2 in Parquet is wrong** — see Data section above. Do not add any new UI features that rely on `kfz_r2` or `kfz_total` until the re-parse is done.
+
+8. **Hourly Profile default station** — frontend defaults to `NW5048` (Köln-Nord, A1, NW). Falls back to `d[0]` if not present.
+
 ---
 
 ## Architecture diagram (text)
@@ -143,7 +152,8 @@ BASt CSV/ZIP → parse_bast.py → Parquet on S3 (Iceberg v2 format)
 
 ## Next steps (see BACKLOG.md for full list)
 
-1. Verify Bedrock chat works after the GET endpoint deploy (commit `f6b0331`)
-2. Add `elasticloadbalancing:DescribeLoadBalancers` to `bast-git` IAM policy
-3. Phase 2: Parse and load Feb–Jun 2026 data (currently only Jan is loaded)
-4. Phase 2 stretch: Dashboard actions from chat (parse `dashboard_action` JSON in SSE stream)
+1. **Verify Bedrock chat works** — test `/api/ask?q=Which+state+has+most+traffic` at the live demo; check CloudWatch `/bast-api` logs if it fails
+2. **Add `elasticloadbalancing:DescribeLoadBalancers`** to `bast-git` IAM policy (noisy deploy step)
+3. **Re-parse all 6 months** — fix `kfz_r2 = int(values[2])` in `parse_bast.py`, add LKW column, re-upload to S3, re-enable Direction 2 in UI (see BACKLOG.md Phase 2 for full scope)
+4. **Delete local `data/raw/`** — free ~2.3 GB; Feb–Jun ZIPs are on S3; re-download Jan from BASt when needed for re-parse
+5. Phase 2 stretch: Dashboard actions from chat (parse `dashboard_action` JSON in SSE stream)

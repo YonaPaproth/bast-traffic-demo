@@ -1,6 +1,6 @@
 # BASt Traffic Demo — Backlog
 
-Last updated: 2026-09-01
+Last updated: 2026-09-02
 
 ---
 
@@ -18,6 +18,11 @@ Last updated: 2026-09-01
 | Architecture page updated | Reflects ECS Fargate + ALB + CloudFront + Bedrock stack |
 | Comparison table updated | Column D: cost, entry barrier, header subtitle all correct |
 | Data extended to Jan–Jun 2026 | All 6 months parsed & uploaded to S3 (2026-09-02); 3.58B total KFZ, 1,943 stations, 181 days |
+| Fix /api/stations HTTP 500 | Rewrote station query to scan Jan-only Parquet (single month, ~1,943 stations) instead of full 6-month glob; removed OOM-prone SUM aggregate |
+| Fix map station markers | Restored `total_kfz = SUM(kfz_r1)` (Jan) to /api/stations; marker size/colour was NaN after the 500 fix stripped all aggregates |
+| Average Daily Pattern Y-axis fix | Replaced Plotly div entirely with DOM `replaceChild` + explicit `range`/`dtick` computed from data; Plotly was inheriting stale tick state across month switches |
+| kfz_r2 removed from Hourly Profile | Parsing bug: `values[1]` is the BASt quality indicator for R1, not Direction 2 count. Removed Direction 2 series from chart as interim fix; re-parse task added to Phase 2 backlog |
+| Default Hourly Profile station | Changed from first-alphabetical (Netzen BB A2, no June data) to Köln-Nord NW A1 (NW5048) |
 
 ---
 
@@ -128,3 +133,5 @@ Column layout: `KFZ_count_R1, KFZ_quality_R1, KFZ_count_R2, KFZ_quality_R2, ...`
 - [ ] Iceberg time travel demo in frontend (snapshot selector → compare traffic month-over-month)
 - [ ] Add Autobahn-only filter toggle to map
 - [ ] `api/main.py` has leftover `BaseModel` import after removing AskRequest — clean up
+- [ ] Delete `data/raw/` locally to free ~2.3 GB — Feb–Jun ZIPs are on S3 (`s3://bast-traffic-demo-112220711619/raw/`); Jan raw ZIP is **not** on S3 (re-download from BASt if re-parse needed)
+- [ ] Station name encoding bug — some names double-encoded UTF-8 as latin-1 (e.g. "Neukölln" stored as "NeukÃ¶lln"); fix in re-parse pass

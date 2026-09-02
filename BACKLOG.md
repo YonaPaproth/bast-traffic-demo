@@ -17,7 +17,7 @@ Last updated: 2026-09-01
 | CORS fix | Changed `/api/ask` from POST to GET; CloudFront CORS-CustomOrigin policy |
 | Architecture page updated | Reflects ECS Fargate + ALB + CloudFront + Bedrock stack |
 | Comparison table updated | Column D: cost, entry barrier, header subtitle all correct |
-| Data extended to Jan–Jun 2026 | Was Jan only |
+| Data extended to Jan–Jun 2026 | All 6 months parsed & uploaded to S3 (2026-09-02); 3.58B total KFZ, 1,943 stations, 181 days |
 
 ---
 
@@ -37,11 +37,9 @@ Last updated: 2026-09-01
 
 ## 🟡 Phase 2 — Demo enhancements
 
-### Load Feb–Jun 2026 data
-- Currently only Jan 2026 Parquet is in S3 (569M records)
-- BASt publishes monthly. Download + run `parse_bast.py` for each month
-- Upload to `s3://bast-traffic-demo-112220711619/traffic/`
-- No API changes needed — glob picks up new files automatically
+### ~~Load Feb–Jun 2026 data~~ ✅ Done 2026-09-02
+- All 6 months (Jan–Jun) live in S3 under `traffic/year=2026/month=XX/`
+- Raw ZIPs remain at `s3://bast-traffic-demo-112220711619/raw/` for re-processing if needed
 
 ### Dashboard actions from chat
 - Claude response can include a structured `dashboard_action` JSON block

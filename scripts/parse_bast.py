@@ -209,7 +209,7 @@ def main():
     print(f"\n{'='*55}")
     print(f"  Total rows       : {len(df):>12,}")
     print(f"  Unique stations  : {df['station_id'].nunique():>12,}")
-    print(f"  Date range       : {df['date'].min().date()} → {df['date'].max().date()}")
+    print(f"  Date range       : {df['date'].min().date()} -> {df['date'].max().date()}")
     print(f"  Total KFZ        : {df['kfz_total'].sum():>12,}")
     print(f"  Output file      : {out_path}")
     print(f"  File size        : {size_mb:>11.2f} MB")

@@ -633,7 +633,8 @@ async function loadHourlyPattern(month) {
       return `rgba(${r},${g},${b},${0.35 + 0.65 * t})`;
     });
 
-    Plotly.react('chart-pattern', [{
+    Plotly.purge('chart-pattern');
+    Plotly.newPlot('chart-pattern', [{
       x: labels,
       y: vals,
       type: 'bar',
@@ -644,7 +645,7 @@ async function loadHourlyPattern(month) {
       height: 340,
       margin: { t: 16, r: 24, b: 52, l: 80 },
       bargap: 0.15,
-      yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f', title: { text: 'Avg vehicles / hour', font: { size: 11 }, standoff: 12 } },
+      yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f', autorange: true, title: { text: 'Avg vehicles / hour', font: { size: 11 }, standoff: 12 } },
       xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10, color: '#505050' } },
     }, { responsive: true, displayModeBar: false });
   } catch(e) {

@@ -525,7 +525,6 @@ async function loadHourly(stationId) {
 
     const labels = [];
     const r1Data = [];
-    const r2Data = [];
 
     const byH = {};
     rows.forEach(row => { byH[row.hour] = row; });
@@ -533,7 +532,6 @@ async function loadHourly(stationId) {
     for (let h = 0; h < 24; h++) {
       labels.push(`${String(h).padStart(2,'0')}:00`);
       r1Data.push(byH[h] ? byH[h].kfz_r1 : 0);
-      r2Data.push(byH[h] ? byH[h].kfz_r2 : 0);
     }
 
     if (_hourlyChart) { _hourlyChart.destroy(); _hourlyChart = null; }
@@ -545,7 +543,7 @@ async function loadHourly(stationId) {
         labels,
         datasets: [
           {
-            label: 'Direction 1',
+            label: 'Vehicles / hour',
             data: r1Data,
             borderColor: '#A100FF',
             backgroundColor: 'rgba(161,0,255,0.07)',
@@ -554,18 +552,6 @@ async function loadHourly(stationId) {
             pointBackgroundColor: '#A100FF',
             tension: 0.4,
             fill: true,
-          },
-          {
-            label: 'Direction 2',
-            data: r2Data,
-            borderColor: '#d29922',
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 2,
-            pointBackgroundColor: '#d29922',
-            borderDash: [5, 3],
-            tension: 0.4,
-            fill: false,
           }
         ]
       },

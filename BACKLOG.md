@@ -37,6 +37,27 @@ Last updated: 2026-09-01
 
 ## 🟡 Phase 2 — Demo enhancements
 
+### Re-parse all 6 months with corrected kfz_r2 + add LKW column
+
+**Why:** Current `parse_bast.py` reads `values[1]` as `kfz_r2`, but in BASt Bestandsbandformat
+`values[1]` is the quality indicator for Direction 1. The true Direction 2 count is at `values[2]`.
+All `kfz_r2` values in the current Parquet files are wrong (quality codes, not counts).
+Direction 2 has been hidden from the UI as an interim fix.
+
+**Scope:**
+- Fix `parse_bast.py`: `kfz_r2 = int(values[2])` (was `values[1]`)
+- While re-parsing, also extract LKW (heavy vehicle) columns: `lkw_r1 = values[X]`, `lkw_r2 = values[X+1]`
+  (verify column offsets against BASt format spec before coding)
+- Re-run `parse_bast.py` for all 6 months (2026_01 through 2026_06)
+- Upload corrected Parquet files to S3 (overwrite existing)
+- Re-enable Direction 1 / Direction 2 lines in Hourly Profile chart once data is trustworthy
+- Add LKW toggle / second dataset to Hourly Profile chart
+
+**Reference:** BASt format header prefix `S02` means 2 values per measurement (count + quality).
+Column layout: `KFZ_count_R1, KFZ_quality_R1, KFZ_count_R2, KFZ_quality_R2, ...`
+
+---
+
 ### ~~Load Feb–Jun 2026 data~~ ✅ Done 2026-09-02
 - All 6 months (Jan–Jun) live in S3 under `traffic/year=2026/month=XX/`
 - Raw ZIPs remain at `s3://bast-traffic-demo-112220711619/raw/` for re-processing if needed

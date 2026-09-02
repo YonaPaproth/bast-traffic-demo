@@ -98,7 +98,8 @@ def get_stations():
                 road_class,
                 road_number,
                 ROUND(AVG(lat), 6) AS lat,
-                ROUND(AVG(lon), 6) AS lon
+                ROUND(AVG(lon), 6) AS lon,
+                SUM(kfz_r1)        AS total_kfz
             FROM {src}
             GROUP BY station_id, station_name, state, road_class, road_number
             ORDER BY station_id

@@ -633,7 +633,17 @@ async function loadHourlyPattern(month) {
       return `rgba(${r},${g},${b},${0.35 + 0.65 * t})`;
     });
 
-    Plotly.purge('chart-pattern');
+    // Replace the div entirely so Plotly has zero prior state to inherit
+    const _oldDiv = document.getElementById('chart-pattern');
+    const _newDiv = document.createElement('div');
+    _newDiv.id = 'chart-pattern';
+    _newDiv.style.width = '100%';
+    _oldDiv.parentNode.replaceChild(_newDiv, _oldDiv);
+
+    // Compute explicit Y-axis scale from this month's data
+    const yMax = max > 0 ? Math.ceil(max * 1.15 / 100) * 100 : 100;
+    const yDtick = yMax <= 300 ? 50 : yMax <= 800 ? 100 : yMax <= 1600 ? 200 : 500;
+
     Plotly.newPlot('chart-pattern', [{
       x: labels,
       y: vals,
@@ -645,7 +655,17 @@ async function loadHourlyPattern(month) {
       height: 340,
       margin: { t: 16, r: 24, b: 52, l: 80 },
       bargap: 0.15,
-      yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f', autorange: true, title: { text: 'Avg vehicles / hour', font: { size: 11 }, standoff: 12 } },
+      yaxis: {
+        gridcolor: '#f0f0f0',
+        zerolinecolor: '#e8e8e8',
+        linecolor: '#e8e8e8',
+        tickfont: { size: 11, color: '#505050' },
+        range: [0, yMax],
+        tick0: 0,
+        dtick: yDtick,
+        tickformat: ',.0f',
+        title: { text: 'Avg vehicles / hour', font: { size: 11 }, standoff: 12 },
+      },
       xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10, color: '#505050' } },
     }, { responsive: true, displayModeBar: false });
   } catch(e) {

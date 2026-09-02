@@ -506,7 +506,11 @@ async function loadStations() {
  sel.addEventListener('change', () => loadHourly(sel.value));
  const dateInput = document.getElementById('hourly-date');
  if (dateInput) dateInput.addEventListener('change', () => loadHourly(sel.value));
- if (d.length) loadHourly(d[0].station_id);
+ if (d.length) {
+   const preferred = d.find(s => s.station_id === 'NW5048') || d[0];
+   sel.value = preferred.station_id;
+   loadHourly(preferred.station_id);
+ }
 }
 
 // ── Hourly profile ────────────────────────────────────

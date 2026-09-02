@@ -30,6 +30,11 @@ PARQUET_GLOB = _S3_PATH if _S3_PATH else _LOCAL_GLOB
 USE_S3 = bool(_S3_PATH)
 AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 
+# Single-month Parquet used for lightweight station-metadata queries.
+# Station attributes (name, state, road class, lat/lon) don't change
+# month-to-month; scanning all 6 months for DISTINCT metadata is too slow.
+_STATION_PARQUET = PARQUET_GLOB.replace("**/*.parquet", "year=2026/month=01/traffic.parquet")
+
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="BASt Traffic Demo API",
@@ -84,6 +89,7 @@ def get_stations():
     """List all stations with metadata."""
     con = get_con()
     try:
+        src = f"read_parquet('{_STATION_PARQUET}', hive_partitioning=false)"
         df = con.execute(f"""
             SELECT
                 station_id,
@@ -91,12 +97,11 @@ def get_stations():
                 state,
                 road_class,
                 road_number,
-                ROUND(AVG(lat), 6)  AS lat,
-                ROUND(AVG(lon), 6)  AS lon,
-                SUM(kfz_total)      AS total_kfz
-            FROM {parquet_source()}
+                ROUND(AVG(lat), 6) AS lat,
+                ROUND(AVG(lon), 6) AS lon
+            FROM {src}
             GROUP BY station_id, station_name, state, road_class, road_number
-            ORDER BY total_kfz DESC
+            ORDER BY station_id
         """).df()
         return df.to_dict(orient="records")
     except Exception as e:
@@ -300,8 +305,8 @@ _PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
 _BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 _BEDROCK_SYSTEM = f"""You are a data analyst assistant for BASt (German Federal Highway Research Institute).
-Help users explore German highway traffic data from January 2026.
-1,832 counting stations, ~569 million vehicles, hourly granularity.
+Help users explore German highway traffic data from January–June 2026.
+~1,943 counting stations, ~3.58 billion vehicles, hourly granularity.
 
 DuckDB SQL data source — use this exact expression in FROM clauses:
   {_PARQUET_EXPR}
@@ -313,8 +318,8 @@ Columns:
   road_class VARCHAR      -- 'A' (Autobahn) or 'B' (Bundesstrasse)
   road_number VARCHAR     -- e.g. '1', '3', '61'
   lat DOUBLE, lon DOUBLE
-  date DATE               -- 2026-01-01 to 2026-01-31
-  hour INTEGER            -- 0-23
+  date DATE               -- 2026-01-01 to 2026-06-30
+  hour INTEGER            -- 1-24 (BASt format: hour 1 = 00:00-01:00, hour 24 = 23:00-00:00)
   kfz_r1 INTEGER          -- vehicles direction 1 per hour
   kfz_r2 INTEGER          -- vehicles direction 2 per hour
   kfz_total INTEGER       -- total both directions

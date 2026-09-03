@@ -311,73 +311,57 @@ def get_traffic_yoy():
     try:
         src = parquet_source()
 
-        # Only include stations that reported in BOTH years (like-for-like comparison).
-        common_cte = f"""
-            common_stations AS (
-                SELECT station_id
-                FROM {src}
-                WHERE MONTH(date::DATE) BETWEEN 1 AND 6
-                  AND YEAR(date::DATE) IN (2025, 2026)
-                GROUP BY station_id
-                HAVING COUNT(DISTINCT YEAR(date::DATE)) = 2
-            )
-        """
-
-        by_state_df = con.execute(f"""
-            WITH {common_cte}
-            SELECT
-                YEAR(date::DATE)               AS year,
-                state,
-                COUNT(DISTINCT station_id)     AS num_stations,
-                SUM(kfz_r1)                   AS kfz_r1,
-                SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
-                SUM(COALESCE(sv_r1, 0))       AS sv_r1
-            FROM {src}
-            WHERE station_id IN (SELECT station_id FROM common_stations)
-              AND MONTH(date::DATE) BETWEEN 1 AND 6
-              AND YEAR(date::DATE) IN (2025, 2026)
-              AND state IS NOT NULL AND state != ''
-            GROUP BY YEAR(date::DATE), state
-            ORDER BY state, year
-        """).df()
-
-        by_road_df = con.execute(f"""
-            WITH {common_cte}
-            SELECT
-                YEAR(date::DATE)               AS year,
-                road_class,
-                COUNT(DISTINCT station_id)     AS num_stations,
-                SUM(kfz_r1)                   AS kfz_r1,
-                SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
-                SUM(COALESCE(sv_r1, 0))       AS sv_r1
-            FROM {src}
-            WHERE station_id IN (SELECT station_id FROM common_stations)
-              AND MONTH(date::DATE) BETWEEN 1 AND 6
-              AND YEAR(date::DATE) IN (2025, 2026)
-              AND road_class IS NOT NULL AND road_class != ''
-            GROUP BY YEAR(date::DATE), road_class
-            ORDER BY road_class, year
-        """).df()
-
-        totals_df = con.execute(f"""
-            WITH {common_cte}
+        # Single scan: aggregate to station level, filter months/years.
+        # Intersection (matched stations) done in Pandas — avoids 4× full-glob scans.
+        station_df = con.execute(f"""
             SELECT
                 YEAR(date::DATE)          AS year,
+                station_id,
+                state,
+                road_class,
                 SUM(kfz_r1)              AS kfz_r1,
                 SUM(COALESCE(pkw_r1, 0)) AS pkw_r1,
                 SUM(COALESCE(sv_r1, 0))  AS sv_r1
             FROM {src}
-            WHERE station_id IN (SELECT station_id FROM common_stations)
-              AND MONTH(date::DATE) BETWEEN 1 AND 6
+            WHERE MONTH(date::DATE) BETWEEN 1 AND 6
               AND YEAR(date::DATE) IN (2025, 2026)
-            GROUP BY YEAR(date::DATE)
-            ORDER BY year
+              AND state IS NOT NULL AND state != ''
+              AND road_class IS NOT NULL AND road_class != ''
+            GROUP BY YEAR(date::DATE), station_id, state, road_class
         """).df()
 
+        # Matched stations: present in both years
+        ids_2025 = set(station_df[station_df.year == 2025].station_id)
+        ids_2026 = set(station_df[station_df.year == 2026].station_id)
+        common   = ids_2025 & ids_2026
+        filt     = station_df[station_df.station_id.isin(common)]
+
+        def agg(df, keys):
+            return (
+                df.groupby(keys)
+                  .agg(num_stations=("station_id", "nunique"),
+                       kfz_r1=("kfz_r1", "sum"),
+                       pkw_r1=("pkw_r1", "sum"),
+                       sv_r1=("sv_r1", "sum"))
+                  .reset_index()
+                  .sort_values(keys)
+            )
+
+        by_state_df  = agg(filt, ["year", "state"])
+        by_road_df   = agg(filt, ["year", "road_class"])
+        totals_df    = (
+            filt.groupby("year")
+                .agg(kfz_r1=("kfz_r1", "sum"),
+                     pkw_r1=("pkw_r1", "sum"),
+                     sv_r1=("sv_r1", "sum"))
+                .reset_index()
+                .sort_values("year")
+        )
+
         return {
-            "by_state": by_state_df.to_dict(orient="records"),
+            "by_state":     by_state_df.to_dict(orient="records"),
             "by_road_class": by_road_df.to_dict(orient="records"),
-            "totals": totals_df.to_dict(orient="records"),
+            "totals":       totals_df.to_dict(orient="records"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

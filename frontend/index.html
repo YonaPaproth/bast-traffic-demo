@@ -854,6 +854,7 @@ async function loadYoY() {
    ...LAYOUT_BASE.yaxis,
    title: { text: '% Change YoY', font: { size: 11 } },
    ticksuffix: '%',
+   tickmode: 'linear', tick0: 0, dtick: 10,
    zeroline: true, zerolinecolor: '#333', zerolinewidth: 2,
  },
  xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },

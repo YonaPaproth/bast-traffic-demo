@@ -821,25 +821,30 @@ async function loadYoY() {
 
  // ── By state chart ──────────────────────────────────
  const byState = data.by_state || [];
- const states = [...new Set(byState.map(r => r.state))].sort();
- const stPct = states.map(st => {
- const r25 = byState.find(r => r.state === st && r.year === 2025) || {};
- const r26 = byState.find(r => r.state === st && r.year === 2026) || {};
- return r25.kfz_r1 ? ((r26.kfz_r1 - r25.kfz_r1) / r25.kfz_r1 * 100) : null;
+ const stateKeys = [...new Set(byState.map(r => r.state))].sort();
+ // Build lookup: state → { 2025: row, 2026: row }
+ const stByYear = {};
+ byState.forEach(r => {
+   const yr = Number(r.year);
+   if (!stByYear[r.state]) stByYear[r.state] = {};
+   stByYear[r.state][yr] = r;
+ });
+ const stPct = stateKeys.map(st => {
+   const v25 = (stByYear[st] || {})[2025];
+   const v26 = (stByYear[st] || {})[2026];
+   if (!v25 || !v25.kfz_r1) return null;
+   return parseFloat(((v26.kfz_r1 - v25.kfz_r1) / v25.kfz_r1 * 100).toFixed(2));
  });
 
  const colours = stPct.map(v => v === null ? '#d4d4d4' : v < 0 ? '#C0392B' : '#27AE60');
 
- const pctMin = Math.min(...stPct.filter(v => v !== null));
- const pctMax = Math.max(...stPct.filter(v => v !== null));
- const pctRange = [Math.floor(pctMin * 1.25), Math.ceil(pctMax * 1.25)];
  Plotly.newPlot('chart-yoy-states', [{
  type: 'bar',
- x: states,
+ x: stateKeys,
  y: stPct,
  marker: { color: colours },
  text: stPct.map(v => v !== null ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : ''),
- textposition: 'auto',
+ textposition: 'outside',
  cliponaxis: false,
  hovertemplate: '<b>%{x}</b><br>Change: %{y:.1f}%<extra></extra>',
  }], {
@@ -850,20 +855,26 @@ async function loadYoY() {
    title: { text: '% Change YoY', font: { size: 11 } },
    ticksuffix: '%',
    zeroline: true, zerolinecolor: '#333', zerolinewidth: 2,
-   range: pctRange,
  },
  xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },
- margin: { t: 32, r: 24, b: 72, l: 68 },
+ margin: { t: 40, r: 24, b: 72, l: 68 },
  }, { responsive: true, displayModeBar: false });
 
  // ── By road class chart ──────────────────────────────
  const byRoad = data.by_road_class || [];
  const roads = [...new Set(byRoad.map(r => r.road_class))].sort();
+ // Build lookup: road_class → { 2025: row, 2026: row }
+ const rdByYear = {};
+ byRoad.forEach(r => {
+   const yr = Number(r.year);
+   if (!rdByYear[r.road_class]) rdByYear[r.road_class] = {};
+   rdByYear[r.road_class][yr] = r;
+ });
 
- const pkw25 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2025) || {}).pkw_r1 || 0);
- const pkw26 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2026) || {}).pkw_r1 || 0);
- const sv25 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2025) || {}).sv_r1 || 0);
- const sv26 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2026) || {}).sv_r1 || 0);
+ const pkw25 = roads.map(rc => ((rdByYear[rc] || {})[2025] || {}).pkw_r1 || 0);
+ const pkw26 = roads.map(rc => ((rdByYear[rc] || {})[2026] || {}).pkw_r1 || 0);
+ const sv25  = roads.map(rc => ((rdByYear[rc] || {})[2025] || {}).sv_r1  || 0);
+ const sv26  = roads.map(rc => ((rdByYear[rc] || {})[2026] || {}).sv_r1  || 0);
 
  const roadLabels = roads.map(r => r === 'A' ? 'Autobahn' : r === 'B' ? 'Bundesstraße' : r);
  // Traces ordered: 2025 PKW, 2025 SV, then 2026 PKW, 2026 SV — grouped by year in legend

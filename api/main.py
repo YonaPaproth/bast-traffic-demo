@@ -311,7 +311,20 @@ def get_traffic_yoy():
     try:
         src = parquet_source()
 
+        # Only include stations that reported in BOTH years (like-for-like comparison).
+        common_cte = f"""
+            common_stations AS (
+                SELECT station_id
+                FROM {src}
+                WHERE MONTH(date::DATE) BETWEEN 1 AND 6
+                  AND YEAR(date::DATE) IN (2025, 2026)
+                GROUP BY station_id
+                HAVING COUNT(DISTINCT YEAR(date::DATE)) = 2
+            )
+        """
+
         by_state_df = con.execute(f"""
+            WITH {common_cte}
             SELECT
                 YEAR(date::DATE)               AS year,
                 state,
@@ -320,14 +333,16 @@ def get_traffic_yoy():
                 SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
                 SUM(COALESCE(sv_r1, 0))       AS sv_r1
             FROM {src}
-            WHERE date::DATE BETWEEN '2025-01-01'::DATE AND '2026-06-30'::DATE
+            WHERE station_id IN (SELECT station_id FROM common_stations)
               AND MONTH(date::DATE) BETWEEN 1 AND 6
+              AND YEAR(date::DATE) IN (2025, 2026)
               AND state IS NOT NULL AND state != ''
             GROUP BY YEAR(date::DATE), state
             ORDER BY state, year
         """).df()
 
         by_road_df = con.execute(f"""
+            WITH {common_cte}
             SELECT
                 YEAR(date::DATE)               AS year,
                 road_class,
@@ -336,22 +351,25 @@ def get_traffic_yoy():
                 SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
                 SUM(COALESCE(sv_r1, 0))       AS sv_r1
             FROM {src}
-            WHERE date::DATE BETWEEN '2025-01-01'::DATE AND '2026-06-30'::DATE
+            WHERE station_id IN (SELECT station_id FROM common_stations)
               AND MONTH(date::DATE) BETWEEN 1 AND 6
+              AND YEAR(date::DATE) IN (2025, 2026)
               AND road_class IS NOT NULL AND road_class != ''
             GROUP BY YEAR(date::DATE), road_class
             ORDER BY road_class, year
         """).df()
 
         totals_df = con.execute(f"""
+            WITH {common_cte}
             SELECT
                 YEAR(date::DATE)          AS year,
                 SUM(kfz_r1)              AS kfz_r1,
                 SUM(COALESCE(pkw_r1, 0)) AS pkw_r1,
                 SUM(COALESCE(sv_r1, 0))  AS sv_r1
             FROM {src}
-            WHERE date::DATE BETWEEN '2025-01-01'::DATE AND '2026-06-30'::DATE
+            WHERE station_id IN (SELECT station_id FROM common_stations)
               AND MONTH(date::DATE) BETWEEN 1 AND 6
+              AND YEAR(date::DATE) IN (2025, 2026)
             GROUP BY YEAR(date::DATE)
             ORDER BY year
         """).df()

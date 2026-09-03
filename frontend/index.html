@@ -466,7 +466,7 @@ async function loadOverview() {
  const dateRange = dateFirst ? (fmtDate(dateFirst) === fmtDate(dateLast) ? fmtDate(dateFirst) : `${fmtDate(dateFirst)} – ${fmtDate(dateLast)}`) : '';
  if (dateRange) {
    document.getElementById('overview-label').textContent = `Overview ${dateRange}`;
-   document.getElementById('daily-subtitle').textContent = `${dateRange} · All Permanent Counting Stations`;
+   document.getElementById('daily-subtitle').textContent = `Jan 2025 – Jun 2026 · All Permanent Counting Stations`;
  }
 
  document.getElementById('kpi-section').innerHTML = [
@@ -476,23 +476,37 @@ async function loadOverview() {
  kpiCard(fmt(weAvg), 'Avg. Weekend Traffic', 'Saturday + Sunday'),
  ].join('');
 
- // Daily area chart
- Plotly.newPlot('chart-daily', [{
- x: d.daily_totals.map(r => r.date),
- y: d.daily_totals.map(r => r.kfz_total),
- type: 'scatter',
- mode: 'lines',
- line: { color: '#A100FF', width: 2.5, shape: 'spline' },
- fill: 'tozeroy',
- fillcolor: 'rgba(161,0,255,0.06)',
- hovertemplate: '<b>%{x|%a, %b %d}</b><br>%{y:,.0f} Vehicles<extra></extra>',
- }], {
+ // Daily area chart — 2 overlaid lines aligned on Jan-Jun axis
+ const alignDay = s => '2000-' + s.slice(5); // strip year so both lines share x-axis
+ const daily2025 = d.daily_totals.filter(r => r.date.startsWith('2025-'));
+ const daily2026 = d.daily_totals.filter(r => r.date.startsWith('2026-'));
+ Plotly.newPlot('chart-daily', [
+ {
+   x: daily2025.map(r => alignDay(r.date)),
+   y: daily2025.map(r => r.kfz_total),
+   name: 'H1 2025',
+   type: 'scatter', mode: 'lines',
+   line: { color: '#999999', width: 2, shape: 'spline', dash: 'dot' },
+   opacity: 0.85,
+   hovertemplate: '<b>%{x|%b %d} 2025</b><br>%{y:,.0f} Vehicles<extra></extra>',
+ },
+ {
+   x: daily2026.map(r => alignDay(r.date)),
+   y: daily2026.map(r => r.kfz_total),
+   name: 'H1 2026',
+   type: 'scatter', mode: 'lines',
+   line: { color: '#A100FF', width: 2.5, shape: 'spline' },
+   fill: 'tozeroy', fillcolor: 'rgba(161,0,255,0.06)',
+   hovertemplate: '<b>%{x|%b %d} 2026</b><br>%{y:,.0f} Vehicles<extra></extra>',
+ },
+ ], {
  ...LAYOUT_BASE,
  height: 380,
  margin: { t: 16, r: 24, b: 52, l: 80 },
  hovermode: 'x unified',
  yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f' },
- xaxis: { ...LAYOUT_BASE.xaxis, tickformat: '%b %d' },
+ xaxis: { ...LAYOUT_BASE.xaxis, tickformat: '%b %d', type: 'date' },
+ legend: { orientation: 'h', x: 1, xanchor: 'right', y: 1.08, font: { size: 12 } },
  }, { responsive: true, displayModeBar: false });
 
  // Top 10 horizontal bar
@@ -816,21 +830,30 @@ async function loadYoY() {
 
  const colours = stPct.map(v => v === null ? '#d4d4d4' : v < 0 ? '#C0392B' : '#27AE60');
 
+ const pctMin = Math.min(...stPct.filter(v => v !== null));
+ const pctMax = Math.max(...stPct.filter(v => v !== null));
+ const pctRange = [Math.floor(pctMin * 1.25), Math.ceil(pctMax * 1.25)];
  Plotly.newPlot('chart-yoy-states', [{
  type: 'bar',
  x: states,
  y: stPct,
  marker: { color: colours },
  text: stPct.map(v => v !== null ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : ''),
- textposition: 'outside',
+ textposition: 'auto',
+ cliponaxis: false,
  hovertemplate: '<b>%{x}</b><br>Change: %{y:.1f}%<extra></extra>',
  }], {
  ...LAYOUT_BASE,
- height: 320,
- yaxis: { ...LAYOUT_BASE.yaxis, title: { text: '% Change', font: { size: 11 } }, zeroline: true, zerolinecolor: '#000', zerolinewidth: 1.5 },
+ height: 340,
+ yaxis: {
+   ...LAYOUT_BASE.yaxis,
+   title: { text: '% Change YoY', font: { size: 11 } },
+   ticksuffix: '%',
+   zeroline: true, zerolinecolor: '#333', zerolinewidth: 2,
+   range: pctRange,
+ },
  xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },
- shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: '#000', width: 1.5 } }],
- margin: { t: 32, r: 24, b: 72, l: 56 },
+ margin: { t: 32, r: 24, b: 72, l: 68 },
  }, { responsive: true, displayModeBar: false });
 
  // ── By road class chart ──────────────────────────────
@@ -843,18 +866,19 @@ async function loadYoY() {
  const sv26 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2026) || {}).sv_r1 || 0);
 
  const roadLabels = roads.map(r => r === 'A' ? 'Autobahn' : r === 'B' ? 'Bundesstraße' : r);
+ // Traces ordered: 2025 PKW, 2025 SV, then 2026 PKW, 2026 SV — grouped by year in legend
  Plotly.newPlot('chart-yoy-roadclass', [
- { name: 'PKW 2025', type: 'bar', x: roadLabels, y: pkw25, marker: { color: '#D499FF' } },
- { name: 'PKW 2026', type: 'bar', x: roadLabels, y: pkw26, marker: { color: '#A100FF' } },
- { name: 'SV 2025', type: 'bar', x: roadLabels, y: sv25, marker: { color: '#F7A0A0' } },
- { name: 'SV 2026', type: 'bar', x: roadLabels, y: sv26, marker: { color: '#C0392B' } },
+ { name: 'PKW 2025', type: 'bar', x: roadLabels, y: pkw25, marker: { color: '#D499FF' }, legendgroup: '2025', legendgrouptitle: { text: '2025' } },
+ { name: 'SV 2025',  type: 'bar', x: roadLabels, y: sv25,  marker: { color: '#F7A0A0' }, legendgroup: '2025' },
+ { name: 'PKW 2026', type: 'bar', x: roadLabels, y: pkw26, marker: { color: '#A100FF' }, legendgroup: '2026', legendgrouptitle: { text: '2026' } },
+ { name: 'SV 2026',  type: 'bar', x: roadLabels, y: sv26,  marker: { color: '#C0392B' }, legendgroup: '2026' },
  ], {
  ...LAYOUT_BASE,
  barmode: 'group',
- height: 320,
+ height: 340,
  yaxis: { ...LAYOUT_BASE.yaxis, title: { text: 'Vehicles H1 Dir.1', font: { size: 11 } }, tickformat: ',.0s' },
- legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
- margin: { t: 16, r: 24, b: 80, l: 68 },
+ legend: { orientation: 'h', y: -0.22, x: 0.5, xanchor: 'center', font: { size: 11 }, tracegroupgap: 12 },
+ margin: { t: 16, r: 24, b: 88, l: 68 },
  }, { responsive: true, displayModeBar: false });
 
  } catch (e) {

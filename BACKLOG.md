@@ -1,10 +1,21 @@
 # BASt Traffic Demo — Backlog
 
-Last updated: 2026-09-02
+Last updated: 2026-09-03
 
 ---
 
-## ✅ Done (this session)
+## ✅ Done (this session — 2026-09-03)
+
+| Item | Notes |
+|---|---|
+| YoY H1 2025 vs H1 2026 comparison feature | New `/api/traffic/yoy` and `/api/traffic/yoy/stations` endpoints; YoY section in frontend with delta KPI cards + state bar chart + road-class grouped chart |
+| S-line aware parser | `parse_bast.py` now reads S-line header per station to dynamically find PKW column offset; fixes kfz_r2=values[2]; adds sv_r1 + pkw_r1 columns; handles S02 06 format stations (no Pkw column) |
+| 2025 H1 data downloaded | `DZ_2025_Rohdaten.zip` (883 MB) downloaded; months 01–06 unzipped into `data/raw/DZ_2025_0X_Rohdaten/` |
+| 2025 H1 parsing in progress | Months 01–02 done; 03–06 + 2026 02–06 re-parse running in background (updates schema with sv_r1/pkw_r1) |
+| COALESCE in YoY SQL | `SUM(COALESCE(pkw_r1,0))` / `SUM(COALESCE(sv_r1,0))` handles old 2026/01 Parquet without these columns |
+| Bedrock system prompt updated | Now covers H1 2025 AND 2026; mentions pkw_r1, sv_r1, geopolitical context |
+
+## ✅ Done (previous sessions)
 
 | Item | Notes |
 |---|---|
@@ -16,69 +27,63 @@ Last updated: 2026-09-02
 | ECS health check fix | Added `curl` to Dockerfile; `startPeriod: 120s` |
 | CORS fix | Changed `/api/ask` from POST to GET; CloudFront CORS-CustomOrigin policy |
 | Architecture page updated | Reflects ECS Fargate + ALB + CloudFront + Bedrock stack |
-| Comparison table updated | Column D: cost, entry barrier, header subtitle all correct |
 | Data extended to Jan–Jun 2026 | All 6 months parsed & uploaded to S3 (2026-09-02); 3.58B total KFZ, 1,943 stations, 181 days |
-| Fix /api/stations HTTP 500 | Rewrote station query to scan Jan-only Parquet (single month, ~1,943 stations) instead of full 6-month glob; removed OOM-prone SUM aggregate |
-| Fix map station markers | Restored `total_kfz = SUM(kfz_r1)` (Jan) to /api/stations; marker size/colour was NaN after the 500 fix stripped all aggregates |
-| Average Daily Pattern Y-axis fix | Replaced Plotly div entirely with DOM `replaceChild` + explicit `range`/`dtick` computed from data; Plotly was inheriting stale tick state across month switches |
-| kfz_r2 removed from Hourly Profile | Parsing bug: `values[1]` is the BASt quality indicator for R1, not Direction 2 count. Removed Direction 2 series from chart as interim fix; re-parse task added to Phase 2 backlog |
-| Default Hourly Profile station | Changed from first-alphabetical (Netzen BB A2, no June data) to Köln-Nord NW A1 (NW5048) |
+| Fix /api/stations HTTP 500 | Rewrote station query to scan Jan-only Parquet; removed OOM-prone SUM aggregate |
+| Fix map station markers | Restored `total_kfz = SUM(kfz_r1)` to /api/stations |
+| Average Daily Pattern Y-axis fix | Replaced Plotly div; explicit `range`/`dtick` from data |
+| kfz_r2 removed from Hourly Profile | Parsing bug found; interim fix (hide Direction 2) |
+| Default Hourly Profile station | Köln-Nord NW A1 (NW5048) |
 
 ---
 
-## 🔴 Immediate (blocking)
+## 🔴 Immediate (next steps)
 
-### Verify Bedrock chat works
-- After commit `f6b0331` deploys (GET endpoint fix), test at the live demo
-- Ask: "Which state has the most traffic?" — should stream an answer
-- If still failing, check CloudFront logs or ECS task logs in CloudWatch (`/bast-api`)
+### Upload 2025 + corrected 2026 Parquet to S3
+
+After background parse completes (months 2025_03–06 and 2026_02–06), upload each file:
+
+```bash
+for year_month in 2025/month=01 2025/month=02 2025/month=03 2025/month=04 2025/month=05 2025/month=06 \
+                  2026/month=02 2026/month=03 2026/month=04 2026/month=05 2026/month=06; do
+  aws s3 cp "data/parquet/year=$year_month/traffic.parquet" \
+    "s3://bast-traffic-demo-112220711619/traffic/year=$year_month/traffic.parquet" \
+    --profile claude-code
+done
+```
+
+Note: 2026/month=01 is kept as-is on S3 (raw data not available locally). COALESCE in API handles missing sv_r1/pkw_r1.
+
+### Verify YoY charts on live demo
+After S3 upload, open `https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html`
+and verify the YoY section shows real data (not the fallback "data unavailable" message).
+
+### Test Bedrock chat with YoY questions
+- "Which state had the biggest drop in freight traffic between 2025 and 2026?"
+- "How did Autobahn vs Bundesstraße traffic compare in H1 2025 vs 2026?"
 
 ### Add `elasticloadbalancing:DescribeLoadBalancers` to `bast-git`
-- The "Print ALB endpoint" step in `docker-deploy.yml` fails silently
-- IAM console → `github-actions-ecs-ecr-policy` → add action `elasticloadbalancing:DescribeLoadBalancers`
-- Resource: `arn:aws:elasticloadbalancing:eu-central-1:112220711619:loadbalancer/app/bast-api-alb/*`
+IAM console → `github-actions-ecs-ecr-policy` → add action `elasticloadbalancing:DescribeLoadBalancers`
+Resource: `arn:aws:elasticloadbalancing:eu-central-1:112220711619:loadbalancer/app/bast-api-alb/*`
 
 ---
 
 ## 🟡 Phase 2 — Demo enhancements
 
-### Re-parse all 6 months with corrected kfz_r2 + add LKW column
+### Re-parse 2026/01 with new schema (optional)
+- Raw ZIP for January 2026 is not on S3 and not available locally
+- Download from BASt website if Direction 2 or per-type breakdown is needed for that month
+- Currently the COALESCE fallback gives sv_r1=0/pkw_r1=0 for 2026/01 — only affects Jan 2026 in YoY aggregate
 
-**Why:** Current `parse_bast.py` reads `values[1]` as `kfz_r2`, but in BASt Bestandsbandformat
-`values[1]` is the quality indicator for Direction 1. The true Direction 2 count is at `values[2]`.
-All `kfz_r2` values in the current Parquet files are wrong (quality codes, not counts).
-Direction 2 has been hidden from the UI as an interim fix.
-
-**Scope:**
-- Fix `parse_bast.py`: `kfz_r2 = int(values[2])` (was `values[1]`)
-- While re-parsing, also extract LKW (heavy vehicle) columns: `lkw_r1 = values[X]`, `lkw_r2 = values[X+1]`
-  (verify column offsets against BASt format spec before coding)
-- Re-run `parse_bast.py` for all 6 months (2026_01 through 2026_06)
-- Upload corrected Parquet files to S3 (overwrite existing)
-- Re-enable Direction 1 / Direction 2 lines in Hourly Profile chart once data is trustworthy
-- Add LKW toggle / second dataset to Hourly Profile chart
-
-**Reference:** BASt format header prefix `S02` means 2 values per measurement (count + quality).
-Column layout: `KFZ_count_R1, KFZ_quality_R1, KFZ_count_R2, KFZ_quality_R2, ...`
-
----
-
-### ~~Load Feb–Jun 2026 data~~ ✅ Done 2026-09-02
-- All 6 months (Jan–Jun) live in S3 under `traffic/year=2026/month=XX/`
-- Raw ZIPs remain at `s3://bast-traffic-demo-112220711619/raw/` for re-processing if needed
+### Re-enable Direction 2 in Hourly Profile
+- kfz_r2 is now correctly parsed as values[2] in new Parquet files
+- Add back Direction 2 series to the Hourly Profile chart
+- Only shows for 2026/02–06 and 2025/01–06; 2026/01 on S3 still has old kfz_r2 (wrong)
 
 ### Dashboard actions from chat
-- Claude response can include a structured `dashboard_action` JSON block
-- Frontend parses it and updates map filter / station selector
-- Example: "Show me the A9" → Claude emits `{"dashboard_action":"filter_road","value":"A9"}` → frontend applies filter
-- Add `dashboard_action` to `_BEDROCK_SYSTEM` prompt and parse it in the SSE stream handler
+- Parse `dashboard_action` JSON in SSE stream and update map filter / station selector
 
 ### Date range picker for overview chart
-- Currently overview shows all data (Jan–Jun)
-- Add a date range selector to let users zoom in on specific months
-
 ### Mobile layout
-- Chat panel and charts need responsive tweaks for phones
 
 ---
 
@@ -86,42 +91,19 @@ Column layout: `KFZ_count_R1, KFZ_quality_R1, KFZ_count_R2, KFZ_quality_R2, ...`
 
 ### Airflow / Step Functions orchestration
 - Replace manual `parse_bast.py` + S3 upload with scheduled pipeline
-- Trigger monthly on BASt data release
-- Idempotency: detect already-processed files, don't double-count
 
 ### Great Expectations data quality
-- BASt raw data has gaps, wrong direction flags, implausible values
-- Add quality checks before Parquet commit
-- Surface data coverage/confidence in UI (e.g. "% stations reporting")
 
 ### AWS Glue Data Catalog (replace SQLite Iceberg catalog)
-- SQLite catalog is local only; doesn't work on ECS
-- Glue: ~$1/month, integrates with Athena + DuckDB REST
-- Enables true Iceberg time travel queries from ECS
 
 ---
 
-## 🔵 Phase 4 — Full open-source production stack (Option A)
+## 🔵 Phase 4 — Full open-source production stack
 
 ### Trino on ECS Fargate
-- Replace single-node DuckDB with distributed Trino
-- Petabyte-scale; <10% slower than Databricks on analytics queries
-- Needs Iceberg REST catalog (Glue or Nessie)
-
 ### Project Nessie (git-like data versioning)
-- Branch, commit, rollback data like code
-- Enables: dev → staging → prod data workflow
-- Self-hostable on ECS or use Dremio Arctic (managed)
-
 ### Lake Formation RBAC
-- Row/column-level security
-- Multi-user, role-based data access
-- Required for any real client data
-
 ### MCP server for management agents
-- Expose API endpoints as MCP tools
-- Claude Desktop / Claude Code can directly query live traffic data
-- Good internal Accenture demo
 
 ---
 
@@ -129,9 +111,10 @@ Column layout: `KFZ_count_R1, KFZ_quality_R1, KFZ_count_R2, KFZ_quality_R2, ...`
 
 - [ ] Custom domain (e.g. `bast-demo.accenture.com`) instead of raw CloudFront/S3 URLs
 - [ ] CloudFront access logs → analyse demo usage
-- [ ] Add `stale-while-revalidate` caching on overview/states endpoints (slow S3 queries)
-- [ ] Iceberg time travel demo in frontend (snapshot selector → compare traffic month-over-month)
+- [ ] Add `stale-while-revalidate` caching on overview/states endpoints
+- [ ] Iceberg time travel demo in frontend
 - [ ] Add Autobahn-only filter toggle to map
-- [ ] `api/main.py` has leftover `BaseModel` import after removing AskRequest — clean up
-- [ ] Delete `data/raw/` locally to free ~2.3 GB — Feb–Jun ZIPs are on S3 (`s3://bast-traffic-demo-112220711619/raw/`); Jan raw ZIP is **not** on S3 (re-download from BASt if re-parse needed)
-- [ ] Station name encoding bug — some names double-encoded UTF-8 as latin-1 (e.g. "Neukölln" stored as "NeukÃ¶lln"); fix in re-parse pass
+- [ ] `api/main.py` has leftover `BaseModel` import — clean up
+- [ ] Delete `data/raw/` locally to free ~2.3 GB after re-parse is done
+- [ ] Station name encoding bug — some names double-encoded UTF-8 as latin-1
+- [ ] PKW share is ~12.5% aggregate (many S02 06 stations lack Pkw column) — consider flagging in UI that PKW stats only cover stations with per-type data

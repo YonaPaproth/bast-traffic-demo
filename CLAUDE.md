@@ -68,6 +68,8 @@ All served via CloudFront HTTPS (`https://d1905gj4v53w41.cloudfront.net`).
 | `GET` | `/api/traffic/states` | Per-state totals (field: `total_kfz`) |
 | `GET` | `/api/traffic/hourly?station_id=&date=` | Hourly profile for one station/day |
 | `GET` | `/api/traffic/daily?station_id=&start=&end=` | Daily totals for one station |
+| `GET` | `/api/traffic/yoy` | H1 2025 vs H1 2026; fields: `by_state`, `by_road_class`, `totals` (each: year, kfz_r1, pkw_r1, sv_r1) |
+| `GET` | `/api/traffic/yoy/stations?limit=N` | Top N stations by absolute KFZ % change 2025→2026 |
 | `GET` | `/api/ask?q=` | Bedrock chat agent; streams SSE (`text/event-stream`) |
 | `GET` | `/api/iceberg/info` | Iceberg table metadata (local only; 404 on ECS) |
 
@@ -84,14 +86,18 @@ data: {"type":"done"}
 
 ## Data
 
-- **Source:** BASt open data, Jan–Jun 2026 (6 months)
-- **Volume:** ~3.58B vehicle records, 1,943 counting stations, 181 days
+- **Source:** BASt open data, H1 2025 + H1 2026 (12 months total)
+- **Volume (2026):** ~3.58B vehicle records, 1,943 counting stations, 181 days
 - **Format:** Parquet on S3, glob: `s3://bast-traffic-demo-112220711619/traffic/**/*.parquet`
-- **Columns:** `station_id, station_name, state, road_class, road_number, lat, lon, date DATE, hour INTEGER (0-23), kfz_r1, kfz_r2, kfz_total INTEGER`
+- **Columns (new schema, 2025 all months + 2026 months 02-06):** `station_id, station_name, state, road_class, road_number, lat, lon, date DATE, hour INTEGER (0-23), kfz_r1, kfz_r2, kfz_total INTEGER, sv_r1 INTEGER, pkw_r1 INTEGER`
+- **2026/month=01 on S3:** old schema (no sv_r1/pkw_r1) — API uses COALESCE to handle this
 - **Iceberg catalog:** SQLite (local only; not used on ECS — ECS queries Parquet directly via DuckDB httpfs)
-- **Raw ZIPs on S3:** `s3://bast-traffic-demo-112220711619/raw/` — Feb–Jun ZIPs only; Jan ZIP not uploaded
+- **Raw ZIPs on S3:** `s3://bast-traffic-demo-112220711619/raw/` — 2026 Feb–Jun ZIPs only; Jan 2026 ZIP not uploaded
+- **2025 raw data:** locally in `data/raw/DZ_2025_0X_Rohdaten/` (months 01–06); not on S3
 
-**kfz_r2 parsing bug (known, not yet fixed):** `parse_bast.py` reads `values[1]` as `kfz_r2`, but `values[1]` is the BASt quality indicator for Direction 1 — the real Direction 2 count is at `values[2]`. All `kfz_r2` values in current Parquet files are wrong. Direction 2 is hidden from the UI. Re-parse task is in BACKLOG.md Phase 2.
+**Parser (S-line aware, current):** `parse_bast.py` reads the `S02 NN TYPE...` header line per station to find the PKW column offset dynamically (`pkw_offset = 12 + sub_index`). Stations with S02 06 format (no Pkw type) get `pkw_r1 = 0`. Fixed `kfz_r2 = int(values[2])` (was `values[1]`). `sv_r1 = int(values[1])` is always Schwerverkehr or Lkw — the heavy-traffic proxy.
+
+**PKW share (~12.5%):** The aggregate PKW_R1 / KFZ_R1 across all stations is ~12.5%, not the ~75-85% expected for German Autobahn. This is because ~50% of stations use S02 06 format (no per-vehicle-type breakdown), so their pkw_r1=0 pulls the aggregate down. The data is correct — many permanent counting stations only report totals.
 
 ---
 
@@ -125,9 +131,11 @@ On 2026-09-01, the Accenture Security Operations Center (ASOC) isolated this wor
 
 6. **`/api/stations` scans January only** — to avoid OOM on the full 3.58B-row glob, the station metadata query reads only `year=2026/month=01/traffic.parquet`. Station attributes (name, state, road class, lat/lon) are stable across months. `total_kfz` in the response is `SUM(kfz_r1)` for January only — relative values are correct for map bubble sizing.
 
-7. **kfz_r2 in Parquet is wrong** — see Data section above. Do not add any new UI features that rely on `kfz_r2` or `kfz_total` until the re-parse is done.
+7. **kfz_r2 is now correct in new Parquet files** — fixed in the S-line aware parser (2026/02–06 re-parsed, 2025/01–06 parsed with correct `values[2]`). But 2026/01 on S3 still has old kfz_r2. Direction 2 still hidden from Hourly Profile UI until 2026/01 is re-parsed or handled.
 
 8. **Hourly Profile default station** — frontend defaults to `NW5048` (Köln-Nord, A1, NW). Falls back to `d[0]` if not present.
+
+9. **2025 Parquet not yet on S3** — as of 2026-09-03, parsing is running locally. YoY section in frontend shows graceful fallback until upload completes. Upload command: see BACKLOG.md "Immediate" section.
 
 ---
 
@@ -152,8 +160,8 @@ BASt CSV/ZIP → parse_bast.py → Parquet on S3 (Iceberg v2 format)
 
 ## Next steps (see BACKLOG.md for full list)
 
-1. **Verify Bedrock chat works** — test `/api/ask?q=Which+state+has+most+traffic` at the live demo; check CloudWatch `/bast-api` logs if it fails
-2. **Add `elasticloadbalancing:DescribeLoadBalancers`** to `bast-git` IAM policy (noisy deploy step)
-3. **Re-parse all 6 months** — fix `kfz_r2 = int(values[2])` in `parse_bast.py`, add LKW column, re-upload to S3, re-enable Direction 2 in UI (see BACKLOG.md Phase 2 for full scope)
-4. **Delete local `data/raw/`** — free ~2.3 GB; Feb–Jun ZIPs are on S3; re-download Jan from BASt when needed for re-parse
+1. **Upload 2025 + re-parsed 2026 Parquet to S3** — once background parse completes, run `aws s3 cp` for each month (see BACKLOG.md "Immediate" section for exact commands). Use `--profile claude-code`.
+2. **Verify YoY charts live** — open the demo frontend and confirm the YoY section shows real data.
+3. **Test Bedrock chat YoY questions** — e.g. "Which state had biggest freight drop from 2025 to 2026?"
+4. **Add `elasticloadbalancing:DescribeLoadBalancers`** to `bast-git` IAM policy (noisy deploy step)
 5. Phase 2 stretch: Dashboard actions from chat (parse `dashboard_action` JSON in SSE stream)

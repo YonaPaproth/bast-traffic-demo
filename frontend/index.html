@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
  tailwind.config = {
@@ -265,25 +264,6 @@
    Comparison uses matched stations present in both H1 2025 and H1 2026.
  </p>
 
- <!-- Charts row -->
- <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
- <!-- By state -->
- <div class="chart-container">
- <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
- <div class="chart-title">% Change by Federal State</div>
- <div class="chart-subtitle">KFZ total direction 1 · H1 2025 → H1 2026 · matched stations only</div>
- </div>
- <div id="chart-yoy-states" style="width:100%;"></div>
- </div>
- <!-- By road class -->
- <div class="chart-container">
- <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
- <div class="chart-title">PKW vs Schwerverkehr by Road Class</div>
- <div class="chart-subtitle">H1 2025 vs H1 2026 · absolute volume direction 1 · matched stations only</div>
- </div>
- <div id="chart-yoy-roadclass" style="width:100%;"></div>
- </div>
- </div>
  </div>
  </section>
 
@@ -308,7 +288,7 @@
  <input id="hourly-date" type="date" class="styled" value="2026-06-15" min="2026-01-01" max="2026-06-30" style="width:140px;">
  </div>
  </div>
- <div id="chart-hourly" style="width:100%;position:relative;height:320px;"><canvas id="canvas-hourly" style="width:100%;height:100%;"></canvas></div>
+ <div id="chart-hourly" style="width:100%;"></div>
  </div>
  </div>
  </section>
@@ -567,8 +547,7 @@ async function loadOverview() {
 
 // ── Stations dropdown ─────────────────────────────────
 async function loadStations() {
- const r = await fetch(`${API_BASE}/api/stations`);
- const d = await r.json();
+ const d = await getStations();
  const sel = document.getElementById('station-select');
  sel.innerHTML = d.map(s =>
  `<option value="${s.station_id}">${s.station_name || s.station_id} · ${s.state || '?'} · ${s.road_class || ''}${s.road_number || ''}</option>`
@@ -584,12 +563,8 @@ async function loadStations() {
 }
 
 // ── Hourly profile ────────────────────────────────────
-let _hourlyChart = null;
-
 async function loadHourly(stationId) {
   const container = document.getElementById('chart-hourly');
-  container.innerHTML = `<canvas id="canvas-hourly" style="width:100%;height:100%;"></canvas>`;
-
   const dateInput = document.getElementById('hourly-date');
   const date = dateInput ? dateInput.value : '2026-01-15';
 
@@ -597,67 +572,33 @@ async function loadHourly(stationId) {
     const r = await fetch(`${API_BASE}/api/traffic/hourly?station_id=${stationId}&date=${date}`);
     const rows = await r.json();
 
-    const labels = [];
-    const r1Data = [];
-
     const byH = {};
     rows.forEach(row => { byH[row.hour] = row; });
-
+    const labels = [];
+    const r1Data = [];
     for (let h = 0; h < 24; h++) {
       labels.push(`${String(h).padStart(2,'0')}:00`);
       r1Data.push(byH[h] ? byH[h].kfz_r1 : 0);
     }
 
-    if (_hourlyChart) { _hourlyChart.destroy(); _hourlyChart = null; }
-
-    const ctx = document.getElementById('canvas-hourly').getContext('2d');
-    _hourlyChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Vehicles / hour',
-            data: r1Data,
-            borderColor: '#A100FF',
-            backgroundColor: 'rgba(161,0,255,0.07)',
-            borderWidth: 2.5,
-            pointRadius: 3,
-            pointBackgroundColor: '#A100FF',
-            tension: 0.4,
-            fill: true,
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        scales: {
-          x: {
-            grid: { color: 'rgba(0,0,0,0.04)' },
-            ticks: { font: { size: 10 }, color: '#707070', maxRotation: 45 }
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(0,0,0,0.04)' },
-            ticks: {
-              font: { size: 10 }, color: '#707070',
-              callback: v => v.toLocaleString('en')
-            },
-            title: { display: true, text: 'Vehicles / hour', font: { size: 10 }, color: '#707070' }
-          }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 24, padding: 12 } },
-          tooltip: {
-            callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('en')}`
-            }
-          }
-        }
-      }
-    });
+    Plotly.newPlot('chart-hourly', [{
+      x: labels,
+      y: r1Data,
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: 'Vehicles / hour',
+      line: { color: '#A100FF', width: 2.5, shape: 'spline' },
+      marker: { color: '#A100FF', size: 4 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(161,0,255,0.07)',
+      hovertemplate: '<b>%{x}</b><br>%{y:,.0f} vehicles<extra></extra>',
+    }], {
+      ...LAYOUT_BASE,
+      height: 320,
+      margin: { t: 16, r: 24, b: 52, l: 72 },
+      yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f', title: { text: 'Vehicles / hour', font: { size: 11 } } },
+      xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10 } },
+    }, { responsive: true, displayModeBar: false });
   } catch(e) {
     container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No data for this station and date.</div>';
   }
@@ -734,12 +675,31 @@ async function loadHourlyPattern(month) {
   }
 }
 
+// ── Shared stations cache ─────────────────────────────
+let _stationsPromise = null;
+function getStations() {
+  if (!_stationsPromise) {
+    _stationsPromise = fetch(`${API_BASE}/api/stations`).then(r => r.json());
+  }
+  return _stationsPromise;
+}
+
 loadOverview().catch(console.error);
 loadStations().catch(console.error);
 loadHourlyPattern('2026-06').catch(console.error);
-loadYoY().catch(console.error);
 
-// ── MAP: lazy-load on scroll into view ────────────────────────────────────────
+// ── YoY: lazy-load on scroll into view ────────────────
+let _yoyLoaded = false;
+const _yoyObserver = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting && !_yoyLoaded) {
+    _yoyLoaded = true;
+    loadYoY().catch(console.error);
+    _yoyObserver.disconnect();
+  }
+}, { rootMargin: '100px' });
+_yoyObserver.observe(document.getElementById('yoy-section'));
+
+// ── MAP: lazy-load on scroll into view ────────────────
 let _mapData = null;
 let _mapLoaded = false;
 const _mapObserver = new IntersectionObserver((entries) => {
@@ -752,8 +712,7 @@ const _mapObserver = new IntersectionObserver((entries) => {
 _mapObserver.observe(document.getElementById('map-chart'));
 
 async function loadMap() {
- const r = await fetch(`${API_BASE}/api/stations`);
- const stations = await r.json();
+ const stations = await getStations();
  // API returns total_kfz; normalise to kfz_total for map rendering
  stations.forEach(s => { s.kfz_total = s.total_kfz; });
  _mapData = stations;
@@ -823,99 +782,6 @@ async function loadYoY() {
  deltaCard('Total Vehicles (KFZ Dir.1)', t25.kfz_r1, t26.kfz_r1, 'vehicles H1') +
  deltaCard('Passenger Cars (PKW Dir.1)', t25.pkw_r1, t26.pkw_r1, 'PKW H1') +
  deltaCard('Heavy Traffic (SV Dir.1)', t25.sv_r1, t26.sv_r1, 'SV H1');
-
- // ── By state chart ──────────────────────────────────
- const byState = data.by_state || [];
- // Build lookup: state → { year: row }
- const stByYear = {};
- byState.forEach(r => {
-   const yr = String(Math.round(Number(r.year)));
-   if (!stByYear[r.state]) stByYear[r.state] = {};
-   stByYear[r.state][yr] = r;
- });
- const allStates = [...new Set(byState.map(r => r.state))].sort();
- // Compute signed % change; sort most-negative → most-positive
- const stRows = allStates.map(st => {
-   const v25 = (stByYear[st] || {})['2025'];
-   const v26 = (stByYear[st] || {})['2026'];
-   if (!v25 || !v25.kfz_r1 || !v26) return null;
-   const pct = (v26.kfz_r1 - v25.kfz_r1) / v25.kfz_r1 * 100;
-   return { state: st, pct };
- }).filter(Boolean).sort((a, b) => a.pct - b.pct);
-
- const stX = stRows.map(r => r.state);
- const stY = stRows.map(r => parseFloat(r.pct.toFixed(2)));
- const stColours = stY.map(v => v < 0 ? '#C0392B' : '#27AE60');
-
- Plotly.newPlot('chart-yoy-states', [{
-   type: 'bar',
-   x: stX,
-   y: stY,
-   marker: { color: stColours },
-   text: stY.map(v => (v > 0 ? '+' : '') + v.toFixed(1) + '%'),
-   textposition: 'outside',
-   cliponaxis: false,
-   hovertemplate: '<b>%{x}</b><br>Change: %{y:.1f}%<extra></extra>',
- }], {
-   paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
-   font: LAYOUT_BASE.font,
-   height: 340,
-   yaxis: {
-     type: 'linear',
-     tickmode: 'linear', tick0: 0, dtick: 10,
-     ticksuffix: '%',
-     gridcolor: '#f0f0f0',
-     zeroline: true, zerolinecolor: '#333', zerolinewidth: 2,
-     tickfont: { size: 11, color: '#505050' },
-     title: { text: '% Change YoY', font: { size: 11 } },
-   },
-   xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },
-   hoverlabel: LAYOUT_BASE.hoverlabel,
-   margin: { t: 40, r: 24, b: 72, l: 68 },
- }, { responsive: true, displayModeBar: false });
-
- // ── By road class chart ──────────────────────────────
- const byRoad = data.by_road_class || [];
- // Build lookup: road_class → { '2025': row, '2026': row }
- const rdByYear = {};
- byRoad.forEach(r => {
-   const yr = String(Math.round(Number(r.year)));
-   if (!rdByYear[r.road_class]) rdByYear[r.road_class] = {};
-   rdByYear[r.road_class][yr] = r;
- });
- // Autobahn before Bundesstraße
- const roads = [...new Set(byRoad.map(r => r.road_class))].sort();
- const roadLabels = roads.map(r => r === 'A' ? 'Autobahn' : r === 'B' ? 'Bundesstraße' : r);
-
- const pkw25 = roads.map(rc => ((rdByYear[rc] || {})['2025'] || {}).pkw_r1 || 0);
- const pkw26 = roads.map(rc => ((rdByYear[rc] || {})['2026'] || {}).pkw_r1 || 0);
- const sv25  = roads.map(rc => ((rdByYear[rc] || {})['2025'] || {}).sv_r1  || 0);
- const sv26  = roads.map(rc => ((rdByYear[rc] || {})['2026'] || {}).sv_r1  || 0);
-
- // Traces ordered: 2025 PKW, 2025 SV, then 2026 PKW, 2026 SV — grouped by year in legend
- Plotly.newPlot('chart-yoy-roadclass', [
-   { name: 'PKW 2025', type: 'bar', x: roadLabels, y: pkw25, marker: { color: '#D499FF' }, legendgroup: '2025', legendgrouptitle: { text: '2025' } },
-   { name: 'SV 2025',  type: 'bar', x: roadLabels, y: sv25,  marker: { color: '#F7A0A0' }, legendgroup: '2025' },
-   { name: 'PKW 2026', type: 'bar', x: roadLabels, y: pkw26, marker: { color: '#A100FF' }, legendgroup: '2026', legendgrouptitle: { text: '2026' } },
-   { name: 'SV 2026',  type: 'bar', x: roadLabels, y: sv26,  marker: { color: '#C0392B' }, legendgroup: '2026' },
- ], {
-   paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
-   font: LAYOUT_BASE.font,
-   barmode: 'group',
-   height: 340,
-   yaxis: {
-     type: 'linear',
-     tickmode: 'auto',
-     tickformat: '.2s',
-     gridcolor: '#f0f0f0',
-     tickfont: { size: 11, color: '#505050' },
-     title: { text: 'Vehicles H1 Dir.1', font: { size: 11 } },
-   },
-   xaxis: { ...LAYOUT_BASE.xaxis },
-   hoverlabel: LAYOUT_BASE.hoverlabel,
-   legend: { orientation: 'h', y: -0.22, x: 0.5, xanchor: 'center', font: { size: 11 }, tracegroupgap: 12 },
-   margin: { t: 16, r: 24, b: 88, l: 68 },
- }, { responsive: true, displayModeBar: false });
 
  } catch (e) {
  document.getElementById('yoy-kpis').innerHTML = `<div style="color:#888;font-size:13px;grid-column:1/-1;padding:16px 0;">YoY data temporarily unavailable — please refresh the page. (${e.message})</div>`;

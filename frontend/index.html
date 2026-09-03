@@ -821,44 +821,52 @@ async function loadYoY() {
 
  // ── By state chart ──────────────────────────────────
  const byState = data.by_state || [];
- const stateKeys = [...new Set(byState.map(r => r.state))].sort();
- // Build lookup: state → { 2025: row, 2026: row }
+ // Build lookup: state → { year: row }
  const stByYear = {};
  byState.forEach(r => {
-   const yr = Number(r.year);
+   const yr = String(Math.round(Number(r.year)));
    if (!stByYear[r.state]) stByYear[r.state] = {};
    stByYear[r.state][yr] = r;
  });
- const stPct = stateKeys.map(st => {
-   const v25 = (stByYear[st] || {})[2025];
-   const v26 = (stByYear[st] || {})[2026];
-   if (!v25 || !v25.kfz_r1) return null;
-   return parseFloat(((v26.kfz_r1 - v25.kfz_r1) / v25.kfz_r1 * 100).toFixed(2));
- });
+ const allStates = [...new Set(byState.map(r => r.state))].sort();
+ // Compute signed % change; sort most-negative → most-positive
+ const stRows = allStates.map(st => {
+   const v25 = (stByYear[st] || {})['2025'];
+   const v26 = (stByYear[st] || {})['2026'];
+   if (!v25 || !v25.kfz_r1 || !v26) return null;
+   const pct = (v26.kfz_r1 - v25.kfz_r1) / v25.kfz_r1 * 100;
+   return { state: st, pct };
+ }).filter(Boolean).sort((a, b) => a.pct - b.pct);
 
- const colours = stPct.map(v => v === null ? '#d4d4d4' : v < 0 ? '#C0392B' : '#27AE60');
+ const stX = stRows.map(r => r.state);
+ const stY = stRows.map(r => parseFloat(r.pct.toFixed(2)));
+ const stColours = stY.map(v => v < 0 ? '#C0392B' : '#27AE60');
 
  Plotly.newPlot('chart-yoy-states', [{
- type: 'bar',
- x: stateKeys,
- y: stPct,
- marker: { color: colours },
- text: stPct.map(v => v !== null ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : ''),
- textposition: 'outside',
- cliponaxis: false,
- hovertemplate: '<b>%{x}</b><br>Change: %{y:.1f}%<extra></extra>',
+   type: 'bar',
+   x: stX,
+   y: stY,
+   marker: { color: stColours },
+   text: stY.map(v => (v > 0 ? '+' : '') + v.toFixed(1) + '%'),
+   textposition: 'outside',
+   cliponaxis: false,
+   hovertemplate: '<b>%{x}</b><br>Change: %{y:.1f}%<extra></extra>',
  }], {
- ...LAYOUT_BASE,
- height: 340,
- yaxis: {
-   ...LAYOUT_BASE.yaxis,
-   title: { text: '% Change YoY', font: { size: 11 } },
-   ticksuffix: '%',
-   tickmode: 'linear', tick0: 0, dtick: 10,
-   zeroline: true, zerolinecolor: '#333', zerolinewidth: 2,
- },
- xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },
- margin: { t: 40, r: 24, b: 72, l: 68 },
+   paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+   font: LAYOUT_BASE.font,
+   height: 340,
+   yaxis: {
+     type: 'linear',
+     tickmode: 'linear', tick0: 0, dtick: 10,
+     ticksuffix: '%',
+     gridcolor: '#f0f0f0',
+     zeroline: true, zerolinecolor: '#333', zerolinewidth: 2,
+     tickfont: { size: 11, color: '#505050' },
+     title: { text: '% Change YoY', font: { size: 11 } },
+   },
+   xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },
+   hoverlabel: LAYOUT_BASE.hoverlabel,
+   margin: { t: 40, r: 24, b: 72, l: 68 },
  }, { responsive: true, displayModeBar: false });
 
  // ── By road class chart ──────────────────────────────

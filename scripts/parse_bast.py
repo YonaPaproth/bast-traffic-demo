@@ -98,20 +98,43 @@ def load_metadata() -> dict:
 # ── Parse a single station file ────────────────────────────────────────────────
 def parse_station_file(path: Path, meta: dict) -> list[dict]:
     """Parse one BASt station file and return a list of record dicts."""
-    # Derive station_id from filename (e.g., "BB3592" from "BB3592.261")
-    station_id = path.stem  # e.g. "BB3592"
-    # Extract numeric part for metadata lookup
+    station_id = path.stem
     numeric_match = re.search(r"(\d+)$", station_id)
     station_num = int(numeric_match.group(1)) if numeric_match else None
     station_meta = meta.get(station_num, {})
+
+    # Per-station column layout derived from S-line header.
+    # BASt Bestandsbandformat S-line: "S02 nn TYPE1 TYPE2 TYPE3 ..."
+    # Empirically validated column positions for all stations:
+    #   values[0] = KFZ_R1  (total vehicles direction 1)
+    #   values[1] = second type R1  (SV=Schwerverkehr, or Lkw, depending on format)
+    #   values[2] = KFZ_R2  (total vehicles direction 2)
+    #   values[12 + k] = (k+1)-th sub-type R1  (types after KFZ and 2nd-type)
+    # pkw_offset is the index into values[] for passenger cars direction 1.
+    pkw_offset = None   # None = no Pkw column in this station's format
 
     records = []
     try:
         with open(path, "r", encoding="latin-1", errors="replace") as f:
             for line in f:
                 line = line.rstrip("\r\n")
-                # Skip header lines
-                if not line or line[0] in ("H", "R", "S"):
+                if not line:
+                    continue
+
+                # Parse S-line to determine column layout for this station
+                if line.startswith("S"):
+                    parts = line.rstrip(";").split()
+                    if len(parts) >= 3:
+                        type_names = [p.upper() for p in parts[2:]]
+                        # First two types are always aggregates (KFZ + SV/Lkw);
+                        # remaining types are sub-types starting at values[12].
+                        if "PKW" in type_names:
+                            # Sub-types start after the first 2 types (KFZ and SV/Lkw).
+                            sub_index = type_names[2:].index("PKW")
+                            pkw_offset = 12 + sub_index
+                    continue
+
+                if line[0] in ("H", "R"):
                     continue
 
                 m = DATA_LINE_RE.match(line)
@@ -119,22 +142,27 @@ def parse_station_file(path: Path, meta: dict) -> list[dict]:
                     continue
 
                 date_str, hh, mm, values_str = m.groups()
-                # Parse date: YYMMDD → datetime
                 try:
                     date = pd.to_datetime(date_str, format="%y%m%d")
                 except ValueError:
                     continue
 
                 hour = int(hh)
-
-                # Extract numeric values (strip trailing `-`)
                 values = VALUE_RE.findall(values_str)
-                if len(values) < 2:
+
+                # Need at least kfz_r1, sv_r1/lkw, kfz_r2
+                if len(values) < 3:
                     continue
 
-                kfz_r1 = int(values[0])
-                kfz_r2 = int(values[1])
+                kfz_r1    = int(values[0])
+                sv_r1     = int(values[1])   # SV or Lkw depending on format — both are heavy-traffic proxy
+                kfz_r2    = int(values[2])
                 kfz_total = kfz_r1 + kfz_r2
+
+                # pkw_r1: only available for stations with "Pkw" in S-line
+                pkw_r1 = 0
+                if pkw_offset is not None and len(values) > pkw_offset:
+                    pkw_r1 = int(values[pkw_offset])
 
                 records.append({
                     "date": date,
@@ -147,6 +175,8 @@ def parse_station_file(path: Path, meta: dict) -> list[dict]:
                     "kfz_r1": kfz_r1,
                     "kfz_r2": kfz_r2,
                     "kfz_total": kfz_total,
+                    "sv_r1": sv_r1,
+                    "pkw_r1": pkw_r1,
                     "lat": station_meta.get("lat"),
                     "lon": station_meta.get("lon"),
                 })
@@ -193,6 +223,8 @@ def main():
     df["kfz_r1"] = df["kfz_r1"].astype("int32")
     df["kfz_r2"] = df["kfz_r2"].astype("int32")
     df["kfz_total"] = df["kfz_total"].astype("int32")
+    df["sv_r1"] = df["sv_r1"].astype("int32")
+    df["pkw_r1"] = df["pkw_r1"].astype("int32")
     df["lat"] = df["lat"].astype("float64")
     df["lon"] = df["lon"].astype("float64")
 
@@ -211,6 +243,10 @@ def main():
     print(f"  Unique stations  : {df['station_id'].nunique():>12,}")
     print(f"  Date range       : {df['date'].min().date()} -> {df['date'].max().date()}")
     print(f"  Total KFZ        : {df['kfz_total'].sum():>12,}")
+    print(f"  Total PKW_R1     : {df['pkw_r1'].sum():>12,}")
+    print(f"  Total SV_R1      : {df['sv_r1'].sum():>12,}")
+    print(f"  PKW share (R1)   : {df['pkw_r1'].sum()/df['kfz_r1'].sum()*100:>11.1f}%")
+    print(f"  SV share (R1)    : {df['sv_r1'].sum()/df['kfz_r1'].sum()*100:>11.1f}%")
     print(f"  Output file      : {out_path}")
     print(f"  File size        : {size_mb:>11.2f} MB")
     print(f"  Elapsed          : {elapsed:>11.1f} s")

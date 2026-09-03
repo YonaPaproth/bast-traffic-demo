@@ -299,6 +299,131 @@ def get_hourly_pattern(
         con.close()
 
 
+# ── Year-over-year comparison ─────────────────────────────────────────────────
+
+@app.get("/api/traffic/yoy")
+def get_traffic_yoy():
+    """
+    H1 2025 vs H1 2026 — PKW and SV (Schwerverkehr) by state and road class.
+    Returns by_state and by_road_class breakdowns.
+    """
+    con = get_con()
+    try:
+        src = parquet_source()
+
+        by_state_df = con.execute(f"""
+            SELECT
+                YEAR(date::DATE)               AS year,
+                state,
+                COUNT(DISTINCT station_id)     AS num_stations,
+                SUM(kfz_r1)                   AS kfz_r1,
+                SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
+                SUM(COALESCE(sv_r1, 0))       AS sv_r1
+            FROM {src}
+            WHERE date::DATE BETWEEN '2025-01-01'::DATE AND '2026-06-30'::DATE
+              AND MONTH(date::DATE) BETWEEN 1 AND 6
+              AND state IS NOT NULL AND state != ''
+            GROUP BY YEAR(date::DATE), state
+            ORDER BY state, year
+        """).df()
+
+        by_road_df = con.execute(f"""
+            SELECT
+                YEAR(date::DATE)               AS year,
+                road_class,
+                COUNT(DISTINCT station_id)     AS num_stations,
+                SUM(kfz_r1)                   AS kfz_r1,
+                SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
+                SUM(COALESCE(sv_r1, 0))       AS sv_r1
+            FROM {src}
+            WHERE date::DATE BETWEEN '2025-01-01'::DATE AND '2026-06-30'::DATE
+              AND MONTH(date::DATE) BETWEEN 1 AND 6
+              AND road_class IS NOT NULL AND road_class != ''
+            GROUP BY YEAR(date::DATE), road_class
+            ORDER BY road_class, year
+        """).df()
+
+        totals_df = con.execute(f"""
+            SELECT
+                YEAR(date::DATE)          AS year,
+                SUM(kfz_r1)              AS kfz_r1,
+                SUM(COALESCE(pkw_r1, 0)) AS pkw_r1,
+                SUM(COALESCE(sv_r1, 0))  AS sv_r1
+            FROM {src}
+            WHERE date::DATE BETWEEN '2025-01-01'::DATE AND '2026-06-30'::DATE
+              AND MONTH(date::DATE) BETWEEN 1 AND 6
+            GROUP BY YEAR(date::DATE)
+            ORDER BY year
+        """).df()
+
+        return {
+            "by_state": by_state_df.to_dict(orient="records"),
+            "by_road_class": by_road_df.to_dict(orient="records"),
+            "totals": totals_df.to_dict(orient="records"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        con.close()
+
+
+@app.get("/api/traffic/yoy/stations")
+def get_yoy_top_stations(limit: int = Query(20, description="Number of top movers to return")):
+    """
+    Top stations by absolute change in kfz_r1 between H1 2025 and H1 2026.
+    Useful for identifying where traffic changed most.
+    """
+    con = get_con()
+    try:
+        src = parquet_source()
+        df = con.execute(f"""
+            WITH by_year AS (
+                SELECT
+                    station_id,
+                    station_name,
+                    state,
+                    road_class,
+                    road_number,
+                    YEAR(date::DATE)  AS year,
+                    SUM(kfz_r1)                   AS kfz_r1,
+                    SUM(COALESCE(pkw_r1, 0))      AS pkw_r1,
+                    SUM(COALESCE(sv_r1, 0))       AS sv_r1
+                FROM {src}
+                WHERE MONTH(date::DATE) BETWEEN 1 AND 6
+                  AND YEAR(date::DATE) IN (2025, 2026)
+                GROUP BY station_id, station_name, state, road_class, road_number, YEAR(date::DATE)
+            ),
+            pivoted AS (
+                SELECT
+                    y25.station_id,
+                    y25.station_name,
+                    y25.state,
+                    y25.road_class,
+                    y25.road_number,
+                    y25.kfz_r1   AS kfz_2025,
+                    y26.kfz_r1   AS kfz_2026,
+                    y25.pkw_r1   AS pkw_2025,
+                    y26.pkw_r1   AS pkw_2026,
+                    y25.sv_r1    AS sv_2025,
+                    y26.sv_r1    AS sv_2026,
+                    ROUND((y26.kfz_r1 - y25.kfz_r1) * 100.0 / NULLIF(y25.kfz_r1, 0), 1) AS kfz_pct_change
+                FROM by_year y25
+                JOIN by_year y26
+                  ON y25.station_id = y26.station_id
+                 AND y25.year = 2025
+                 AND y26.year = 2026
+            )
+            SELECT * FROM pivoted
+            ORDER BY ABS(kfz_pct_change) DESC
+            LIMIT {limit}
+        """).df()
+        return df.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        con.close()
+
+
 # ── Bedrock chat ──────────────────────────────────────────────────────────────
 
 _PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
@@ -306,8 +431,9 @@ _PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
 _BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 _BEDROCK_SYSTEM = f"""You are a data analyst assistant for BASt (German Federal Highway Research Institute).
-Help users explore German highway traffic data from January–June 2026.
-~1,943 counting stations, ~3.58 billion vehicles, hourly granularity.
+Help users explore German highway traffic data covering H1 2025 (Jan–Jun 2025) AND H1 2026 (Jan–Jun 2026).
+~1,943 counting stations, ~7B vehicle records across both years, hourly granularity.
+Context: traffic may differ between years due to geopolitical and economic developments in 2025–2026.
 
 DuckDB SQL data source — use this exact expression in FROM clauses:
   {_PARQUET_EXPR}
@@ -319,12 +445,15 @@ Columns:
   road_class VARCHAR      -- 'A' (Autobahn) or 'B' (Bundesstrasse)
   road_number VARCHAR     -- e.g. '1', '3', '61'
   lat DOUBLE, lon DOUBLE
-  date DATE               -- 2026-01-01 to 2026-06-30
+  date DATE               -- 2025-01-01 to 2025-06-30 (2025) or 2026-01-01 to 2026-06-30 (2026)
   hour INTEGER            -- 1-24 (BASt format: hour 1 = 00:00-01:00, hour 24 = 23:00-00:00)
-  kfz_r1 INTEGER          -- vehicles direction 1 per hour
-  kfz_r2 INTEGER          -- vehicles direction 2 per hour
+  kfz_r1 INTEGER          -- total vehicles direction 1 per hour
+  kfz_r2 INTEGER          -- total vehicles direction 2 per hour
   kfz_total INTEGER       -- total both directions
+  pkw_r1 INTEGER          -- Pkw (passenger cars) direction 1 per hour
+  sv_r1 INTEGER           -- Schwerverkehr (heavy traffic: trucks + buses) direction 1 per hour
 
+Year-over-year queries: filter by YEAR(date) = 2025 or 2026, then compare.
 Always call execute_sql to fetch real data before answering.
 Add LIMIT 20 unless the user asks for more. Be concise and data-driven."""
 

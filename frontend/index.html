@@ -231,6 +231,57 @@
  </div>
  </section>
 
+ <!-- ─── Year-over-Year Comparison ─────────────── -->
+ <section style="background:#fff;padding:48px 0;" id="yoy-section">
+ <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+ <div style="margin-bottom:32px;">
+ <div class="divider-purple"></div>
+ <div class="section-label">Year-over-Year</div>
+ <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">H1 2025 vs H1 2026 — Traffic Change</h2>
+ <p style="font-size:14px;color:#505050;margin-top:8px;max-width:640px;">Comparing January–June 2025 with January–June 2026 across all 1,943 stations. Tracking PKW (passenger cars) and SV (Schwerverkehr = heavy traffic) separately.</p>
+ </div>
+
+ <!-- Delta KPIs -->
+ <div id="yoy-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:32px;">
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:40px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:40px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+ <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+ <div style="height:40px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:12px;"></div>
+ <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ </div>
+ </div>
+
+ <!-- Charts row -->
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+ <!-- By state -->
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+ <div class="chart-title">% Change by Federal State</div>
+ <div class="chart-subtitle">KFZ total direction 1 · H1 2025 → H1 2026</div>
+ </div>
+ <div id="chart-yoy-states" style="width:100%;"></div>
+ </div>
+ <!-- By road class -->
+ <div class="chart-container">
+ <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+ <div class="chart-title">PKW vs Schwerverkehr by Road Class</div>
+ <div class="chart-subtitle">H1 2025 vs H1 2026 · absolute volume direction 1</div>
+ </div>
+ <div id="chart-yoy-roadclass" style="width:100%;"></div>
+ </div>
+ </div>
+ </div>
+ </section>
+
  <!-- ─── Hourly Profile ──────────────────────────── -->
  <section class="section-alt" style="padding:48px 0;">
  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
@@ -667,6 +718,7 @@ async function loadHourlyPattern(month) {
 loadOverview().catch(console.error);
 loadStations().catch(console.error);
 loadHourlyPattern('2026-06').catch(console.error);
+loadYoY().catch(console.error);
 
 // ── MAP: lazy-load on scroll into view ────────────────────────────────────────
 let _mapData = null;
@@ -714,6 +766,100 @@ async function loadMap() {
  };
 
  Plotly.newPlot('map-chart', [trace], layout, { responsive: true, displayModeBar: false });
+}
+
+// ── Year-over-Year comparison ─────────────────────────
+async function loadYoY() {
+ try {
+ const resp = await fetch(`${API_BASE}/api/traffic/yoy`);
+ if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+ const data = await resp.json();
+
+ const totals = data.totals || [];
+ const t25 = totals.find(r => r.year === 2025) || {};
+ const t26 = totals.find(r => r.year === 2026) || {};
+
+ function pctChange(a, b) {
+ if (!a || a === 0) return null;
+ return ((b - a) / a * 100).toFixed(1);
+ }
+
+ function deltaCard(label, val25, val26, unit) {
+ const pct = pctChange(val25, val26);
+ const sign = pct > 0 ? '+' : '';
+ const colour = pct < 0 ? '#C0392B' : pct > 0 ? '#27AE60' : '#505050';
+ const arrow = pct < 0 ? '↓' : pct > 0 ? '↑' : '→';
+ return `
+ <div class="kpi-card">
+ <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:12px;letter-spacing:0.01em;">${label}</div>
+ <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+ <div class="kpi-value" style="font-size:36px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1;">${sign}${pct !== null ? pct + '%' : '–'}</div>
+ <span style="font-size:20px;color:${colour};font-weight:700;">${arrow}</span>
+ </div>
+ <div style="font-size:12px;color:#505050;margin-top:8px;">${fmt(val25)} → ${fmt(val26)} ${unit}</div>
+ </div>`;
+ }
+
+ document.getElementById('yoy-kpis').innerHTML =
+ deltaCard('Total Vehicles (KFZ Dir.1)', t25.kfz_r1, t26.kfz_r1, 'vehicles H1') +
+ deltaCard('Passenger Cars (PKW Dir.1)', t25.pkw_r1, t26.pkw_r1, 'PKW H1') +
+ deltaCard('Heavy Traffic (SV Dir.1)', t25.sv_r1, t26.sv_r1, 'SV H1');
+
+ // ── By state chart ──────────────────────────────────
+ const byState = data.by_state || [];
+ const states = [...new Set(byState.map(r => r.state))].sort();
+ const stPct = states.map(st => {
+ const r25 = byState.find(r => r.state === st && r.year === 2025) || {};
+ const r26 = byState.find(r => r.state === st && r.year === 2026) || {};
+ return r25.kfz_r1 ? ((r26.kfz_r1 - r25.kfz_r1) / r25.kfz_r1 * 100) : null;
+ });
+
+ const colours = stPct.map(v => v === null ? '#d4d4d4' : v < 0 ? '#C0392B' : '#27AE60');
+
+ Plotly.newPlot('chart-yoy-states', [{
+ type: 'bar',
+ x: states,
+ y: stPct,
+ marker: { color: colours },
+ text: stPct.map(v => v !== null ? (v > 0 ? '+' : '') + v.toFixed(1) + '%' : ''),
+ textposition: 'outside',
+ hovertemplate: '<b>%{x}</b><br>Change: %{y:.1f}%<extra></extra>',
+ }], {
+ ...LAYOUT_BASE,
+ height: 320,
+ yaxis: { ...LAYOUT_BASE.yaxis, title: { text: '% Change', font: { size: 11 } }, zeroline: true, zerolinecolor: '#000', zerolinewidth: 1.5 },
+ xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -30 },
+ shapes: [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: 0, y1: 0, line: { color: '#000', width: 1.5 } }],
+ margin: { t: 32, r: 24, b: 72, l: 56 },
+ }, { responsive: true, displayModeBar: false });
+
+ // ── By road class chart ──────────────────────────────
+ const byRoad = data.by_road_class || [];
+ const roads = [...new Set(byRoad.map(r => r.road_class))].sort();
+
+ const pkw25 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2025) || {}).pkw_r1 || 0);
+ const pkw26 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2026) || {}).pkw_r1 || 0);
+ const sv25 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2025) || {}).sv_r1 || 0);
+ const sv26 = roads.map(rc => (byRoad.find(r => r.road_class === rc && r.year === 2026) || {}).sv_r1 || 0);
+
+ const roadLabels = roads.map(r => r === 'A' ? 'Autobahn' : r === 'B' ? 'Bundesstraße' : r);
+ Plotly.newPlot('chart-yoy-roadclass', [
+ { name: 'PKW 2025', type: 'bar', x: roadLabels, y: pkw25, marker: { color: '#D499FF' } },
+ { name: 'PKW 2026', type: 'bar', x: roadLabels, y: pkw26, marker: { color: '#A100FF' } },
+ { name: 'SV 2025', type: 'bar', x: roadLabels, y: sv25, marker: { color: '#F7A0A0' } },
+ { name: 'SV 2026', type: 'bar', x: roadLabels, y: sv26, marker: { color: '#C0392B' } },
+ ], {
+ ...LAYOUT_BASE,
+ barmode: 'group',
+ height: 320,
+ yaxis: { ...LAYOUT_BASE.yaxis, title: { text: 'Vehicles H1 Dir.1', font: { size: 11 } }, tickformat: ',.0s' },
+ legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 11 } },
+ margin: { t: 16, r: 24, b: 80, l: 68 },
+ }, { responsive: true, displayModeBar: false });
+
+ } catch (e) {
+ document.getElementById('yoy-kpis').innerHTML = `<div style="color:#888;font-size:13px;grid-column:1/-1;padding:16px 0;">YoY data unavailable — 2025 data not yet uploaded (${e.message})</div>`;
+ }
 }
 
 function toggleMapFullscreen() {

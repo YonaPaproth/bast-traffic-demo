@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Traffic Operations Agent: Agentic Reinvention in Infrastructure</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #fff; color: #111; -webkit-font-smoothing: antialiased; }
+
+.page { max-width: 1200px; margin: 0 auto; padding: 48px 32px; }
+.section { margin-bottom: 64px; }
+h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.lead { font-size: 16px; color: #505050; line-height: 1.6; max-width: 680px; margin-top: 12px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 2px; margin-bottom: 12px; }
+.tag-purple { background: #f3e5ff; color: #A100FF; }
+.tag-blue { background: #e5f0ff; color: #0050D0; }
+.tag-green { background: #e5f5ee; color: #007040; }
+.tag-orange { background: #fff3e5; color: #C05000; }
+.tag-gray { background: #f0f0f0; color: #505050; }
+.tag-dark { background: #111; color: #fff; }
+
+.divider { height: 3px; width: 40px; background: #A100FF; margin-bottom: 16px; }
+
+/* Layers */
+.layers { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.layer { border-radius: 6px; padding: 14px 20px; display: flex; align-items: flex-start; gap: 16px; border: 1.5px solid transparent; }
+.layer-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; min-width: 110px; flex-shrink: 0; padding-top: 2px; }
+.layer-desc { font-size: 13px; color: #333; line-height: 1.6; }
+.layer-bronze { background: #fdf7f0; border-color: #d2a06e; }
+.layer-bronze .layer-label { color: #8B5A1A; }
+.layer-silver { background: #f5f5f8; border-color: #9090a8; }
+.layer-silver .layer-label { color: #404060; }
+.layer-gold { background: #fffdf0; border-color: #d4af37; }
+.layer-gold .layer-label { color: #8B7000; }
+.layer-platinum { background: #f0f7ff; border-color: #6090cc; }
+.layer-platinum .layer-label { color: #004080; }
+
+/* Task cards */
+.task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 28px; }
+.task-card { background: #fff; border: 1.5px solid #e0e0e0; border-radius: 8px; overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; }
+.task-card:hover { border-color: #A100FF; box-shadow: 0 2px 12px rgba(161,0,255,0.10); }
+.task-card-top { padding: 20px 20px 16px; }
+.task-card-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; margin-bottom: 12px; }
+.task-card-name { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 6px; line-height: 1.3; }
+.task-card-prompt { font-size: 12px; color: #505050; line-height: 1.5; font-style: italic; margin-bottom: 10px; }
+.task-card-output { font-size: 12px; color: #333; line-height: 1.5; }
+.task-card-bottom { border-top: 1px solid #f0f0f0; padding: 10px 20px; background: #fafafa; font-size: 11px; font-weight: 600; color: #707070; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Before/after */
+.ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 28px; border: 1.5px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+.ba-col { padding: 28px 32px; }
+.ba-col-before { background: #fafafa; border-right: 1.5px solid #e0e0e0; }
+.ba-col-after { background: #fdf5ff; }
+.ba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+.ba-step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.ba-step:last-child { margin-bottom: 0; }
+.ba-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.ba-text { font-size: 13px; color: #333; line-height: 1.5; }
+.ba-time { font-size: 11px; font-weight: 600; margin-top: 2px; }
+
+/* Arc phases */
+.arc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 28px; border: 1.5px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+.arc-phase { padding: 24px 20px; border-right: 1px solid #f0f0f0; }
+.arc-phase:last-child { border-right: none; }
+.arc-phase-num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #909090; margin-bottom: 8px; }
+.arc-phase-label { font-size: 16px; font-weight: 800; margin-bottom: 6px; line-height: 1.2; }
+.arc-phase-sub { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+.arc-phase-desc { font-size: 12px; color: #505050; line-height: 1.6; }
+.arc-phase-badge { margin-top: 14px; display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 2px; }
+
+/* How it's built */
+.stack-callout { background: #f7f7f9; border-radius: 8px; padding: 24px 28px; margin-top: 28px; display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.stack-callout-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #A100FF; margin-bottom: 8px; }
+.stack-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.stack-pill { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 3px; background: #fff; border: 1.5px solid #e0e0e0; color: #333; }
+
+footer { border-top: 1px solid #e0e0e0; margin-top: 64px; padding-top: 24px; font-size: 12px; color: #909090; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 900px) {
+  .task-grid { grid-template-columns: 1fr 1fr; }
+  .arc-grid { grid-template-columns: 1fr 1fr; }
+  .arc-phase { border-bottom: 1px solid #f0f0f0; }
+}
+@media (max-width: 640px) {
+  .ba-grid { grid-template-columns: 1fr; }
+  .ba-col-before { border-right: none; border-bottom: 1.5px solid #e0e0e0; }
+  .task-grid { grid-template-columns: 1fr; }
+  .arc-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 28px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Nav ── -->
+  <div style="margin-bottom:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#A100FF;text-decoration:none;padding:6px 14px;border:1.5px solid #A100FF;border-radius:2px;" onmouseover="this.style.background='#f3e5ff'" onmouseout="this.style.background='transparent'">
+      ← Live Demo
+    </a>
+    <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/architecture.html" style="font-size:13px;font-weight:500;color:#505050;text-decoration:none;" onmouseover="this.style.color='#A100FF'" onmouseout="this.style.color='#505050'">
+      See the architecture →
+    </a>
+  </div>
+
+  <!-- ── Hero ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-purple" style="font-size:12px;letter-spacing:0.14em;">AGENTIC REINVENTION</div>
+    <h1 style="font-size:48px;font-weight:900;letter-spacing:-0.03em;line-height:1.06;margin-top:8px;max-width:860px;">
+      Meet your new<br>Traffic Operations Agent.
+    </h1>
+    <p class="lead" style="max-width:680px;margin-top:18px;font-size:17px;">
+      Not a dashboard. Not a report. An agent that monitors 1,832 stations, answers operational questions in seconds, and produces work that used to take analysts days — continuously, without a backlog.
+    </p>
+
+    <!-- Stat row -->
+    <div style="display:flex;gap:0;flex-wrap:wrap;margin-top:40px;padding:36px 40px;background:#0d1117;border-radius:8px;color:#fff;">
+      <div style="flex:1;min-width:160px;">
+        <div style="font-size:48px;font-weight:900;color:#A100FF;letter-spacing:-0.03em;line-height:1;">1,832</div>
+        <div style="font-size:13px;color:#8b949e;margin-top:8px;line-height:1.4;">counting stations monitored<br>across all 16 German states</div>
+      </div>
+      <div style="flex:1;min-width:160px;border-left:1px solid #30363d;padding-left:36px;">
+        <div style="font-size:48px;font-weight:900;color:#fff;letter-spacing:-0.03em;line-height:1;">569M</div>
+        <div style="font-size:13px;color:#8b949e;margin-top:8px;line-height:1.4;">vehicle records in the corpus<br>Jan – Jun 2026, queried live</div>
+      </div>
+      <div style="flex:1;min-width:160px;border-left:1px solid #30363d;padding-left:36px;">
+        <div style="font-size:48px;font-weight:900;color:#fff;letter-spacing:-0.03em;line-height:1;">&lt;3s</div>
+        <div style="font-size:13px;color:#8b949e;margin-top:8px;line-height:1.4;">from natural language question<br>to full analytical answer</div>
+      </div>
+      <div style="flex:1;min-width:160px;border-left:1px solid #30363d;padding-left:36px;">
+        <div style="font-size:48px;font-weight:900;color:#A100FF;letter-spacing:-0.03em;line-height:1;">5</div>
+        <div style="font-size:13px;color:#8b949e;margin-top:8px;line-height:1.4;">task types the agent handles<br>today — more added per sprint</div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div style="margin-top:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#fff;text-decoration:none;padding:12px 24px;background:#A100FF;border-radius:3px;" onmouseover="this.style.background='#8800dd'" onmouseout="this.style.background='#A100FF'">
+        Ask the agent live →
+      </a>
+      <span style="font-size:13px;color:#707070;">Try: "Which state had the most traffic in March?" or "When should we schedule maintenance on the A9?"</span>
+    </div>
+  </div>
+
+  <!-- ── 5 Task Cards ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-purple">What the agent does</div>
+    <h2 style="font-size:28px;font-weight:800;">Five tasks. One agent. No analyst queue.</h2>
+    <p class="lead">These are the operational questions that currently land in an analyst's inbox and take days. The agent handles them in seconds — with the same data, the same rigour, and a full audit trail.</p>
+
+    <div class="task-grid">
+
+      <!-- Task 1 -->
+      <div class="task-card">
+        <div class="task-card-top">
+          <div class="task-card-icon" style="background:#f3e5ff;">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke="#A100FF" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </div>
+          <div class="task-card-name">Explain abnormal congestion</div>
+          <div class="task-card-prompt">"Why was the A9 southbound backed up last Tuesday at 07:30?"</div>
+          <div class="task-card-output">Root cause analysis from hourly station data — volume spike, direction imbalance, upstream bottleneck — with supporting numbers.</div>
+        </div>
+        <div class="task-card-bottom">Operations · Incident review</div>
+      </div>
+
+      <!-- Task 2 -->
+      <div class="task-card">
+        <div class="task-card-top">
+          <div class="task-card-icon" style="background:#fff3e5;">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke="#C05000" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="task-card-name">Predict incident risk</div>
+          <div class="task-card-prompt">"Which corridors are at elevated risk this bank holiday weekend?"</div>
+          <div class="task-card-output">Risk ranking by station and time window, based on historical volume patterns and seasonal trends across the full dataset.</div>
+        </div>
+        <div class="task-card-bottom">Planning · Risk management</div>
+      </div>
+
+      <!-- Task 3 -->
+      <div class="task-card">
+        <div class="task-card-top">
+          <div class="task-card-icon" style="background:#e5f5ee;">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke="#007040" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+          </div>
+          <div class="task-card-name">Recommend maintenance windows</div>
+          <div class="task-card-prompt">"When should we close the A3 near Frankfurt for overnight resurfacing?"</div>
+          <div class="task-card-output">Lowest-traffic windows identified from hourly profiles, with estimated diversion impact and comparable historical closures.</div>
+        </div>
+        <div class="task-card-bottom">Asset management · Scheduling</div>
+      </div>
+
+      <!-- Task 4 -->
+      <div class="task-card">
+        <div class="task-card-top">
+          <div class="task-card-icon" style="background:#e5f0ff;">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke="#0050D0" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div class="task-card-name">Draft regulator reports</div>
+          <div class="task-card-prompt">"Summarise traffic performance on federal motorways for the Q2 2026 BASt submission."</div>
+          <div class="task-card-output">Structured prose report with volume totals, peak periods, state breakdowns, and trend commentary — ready for human review and sign-off.</div>
+        </div>
+        <div class="task-card-bottom">Compliance · Reporting</div>
+      </div>
+
+      <!-- Task 5 -->
+      <div class="task-card">
+        <div class="task-card-top">
+          <div class="task-card-icon" style="background:#f3e5ff;">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke="#A100FF" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          </div>
+          <div class="task-card-name">Prioritise road interventions</div>
+          <div class="task-card-prompt">"Rank the 10 worst-performing links this quarter by congestion frequency."</div>
+          <div class="task-card-output">Ranked intervention list with volume data, peak impact hours, and a plain-language justification for each — audit-ready for budget allocation.</div>
+        </div>
+        <div class="task-card-bottom">Capital planning · Investment</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Before / After ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-gray">Operations Reinvented</div>
+    <h2 style="font-size:28px;font-weight:800;">Same question. Different world.</h2>
+    <p class="lead">The insight was always in the data. The bottleneck was the process to get it out.</p>
+
+    <div class="ba-grid">
+      <div class="ba-col ba-col-before">
+        <div class="ba-label" style="color:#CC0000;">Before — Today's reality</div>
+
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">1</div>
+          <div>
+            <div class="ba-text">Ops manager notices unusual congestion. Raises ticket with data team.</div>
+            <div class="ba-time" style="color:#CC0000;">Day 0 → ticket raised</div>
+          </div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">2</div>
+          <div>
+            <div class="ba-text">Analyst finds the request in backlog. Pulls raw hourly data from multiple systems. Cleans it manually in Excel.</div>
+            <div class="ba-time" style="color:#CC0000;">Day 2–3 → data pulled</div>
+          </div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">3</div>
+          <div>
+            <div class="ba-text">First draft written. Shared for review. Errors found. Data re-pulled for updated date range.</div>
+            <div class="ba-time" style="color:#CC0000;">Day 4–5 → revision cycle</div>
+          </div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">4</div>
+          <div>
+            <div class="ba-text">Final report sent. The incident it describes happened five days ago. Decision window has passed.</div>
+            <div class="ba-time" style="color:#CC0000;">Day 5–7 → insight arrives late</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;padding:14px 18px;background:#fff0f0;border-radius:4px;border-left:3px solid #CC0000;">
+          <div style="font-size:12px;font-weight:700;color:#CC0000;margin-bottom:4px;">Cost of delay</div>
+          <div style="font-size:12px;color:#505050;line-height:1.5;">Analyst spends ~6 hours. Decision arrives after the event. Repeat monthly. Multiply across 16 states.</div>
+        </div>
+      </div>
+
+      <div class="ba-col ba-col-after">
+        <div class="ba-label" style="color:#A100FF;">After — The agent at work</div>
+
+        <div class="ba-step">
+          <div class="ba-num" style="background:#A100FF;color:#fff;">1</div>
+          <div>
+            <div class="ba-text">Ops manager types: "Why was the A9 backed up on Tuesday morning?" into the chat interface.</div>
+            <div class="ba-time" style="color:#007040;">T+0 → question asked</div>
+          </div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#A100FF;color:#fff;">2</div>
+          <div>
+            <div class="ba-text">Agent translates to SQL, queries 569M records live via DuckDB on S3. Streams back results token by token.</div>
+            <div class="ba-time" style="color:#007040;">T+2s → query running</div>
+          </div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#A100FF;color:#fff;">3</div>
+          <div>
+            <div class="ba-text">Agent synthesises the numbers into a clear explanation: volume spike, station comparison, directional breakdown.</div>
+            <div class="ba-time" style="color:#007040;">T+5s → answer delivered</div>
+          </div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#A100FF;color:#fff;">4</div>
+          <div>
+            <div class="ba-text">Ops manager asks a follow-up. Agent answers. Decision made in the same session while the issue is still live.</div>
+            <div class="ba-time" style="color:#007040;">T+30s → decision made</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;padding:14px 18px;background:#f3e5ff;border-radius:4px;border-left:3px solid #A100FF;">
+          <div style="font-size:12px;font-weight:700;color:#A100FF;margin-bottom:4px;">Value created</div>
+          <div style="font-size:12px;color:#505050;line-height:1.5;">Analyst focuses on judgment and action. Every question is answered at the speed of thought. Full audit trail retained.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── The Reinvention Arc ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-purple">The Reinvention Arc</div>
+    <h2 style="font-size:28px;font-weight:800;">Start narrow. Scale the intelligence.</h2>
+    <p class="lead">Agentic reinvention is not a big-bang transformation. It follows a repeatable arc — from answering questions, to monitoring continuously, to drafting outputs, to taking approved actions.</p>
+
+    <div class="arc-grid">
+      <div class="arc-phase" style="background:#fdf5ff;border-bottom:3px solid #A100FF;">
+        <div class="arc-phase-num">Phase 1 · Now</div>
+        <div class="arc-phase-label" style="color:#A100FF;">Agent answers</div>
+        <div class="arc-phase-sub" style="color:#A100FF;">On demand</div>
+        <div class="arc-phase-desc">The agent responds to questions typed in natural language. Text-to-SQL against live data. Full analytical answer in seconds. This demo is Phase 1.</div>
+        <div class="arc-phase-badge" style="background:#A100FF;color:#fff;">This demo</div>
+      </div>
+      <div class="arc-phase" style="border-bottom:3px solid #C05000;">
+        <div class="arc-phase-num">Phase 2 · Month 1–2</div>
+        <div class="arc-phase-label" style="color:#C05000;">Agent monitors</div>
+        <div class="arc-phase-sub" style="color:#C05000;">Proactive</div>
+        <div class="arc-phase-desc">Agent runs continuously. Detects anomalies — congestion spikes, station failures, seasonal outliers — and surfaces alerts before anyone thinks to ask.</div>
+        <div class="arc-phase-badge" style="background:#fff3e5;color:#C05000;border:1px solid #C05000;">Next sprint</div>
+      </div>
+      <div class="arc-phase" style="border-bottom:3px solid #0050D0;">
+        <div class="arc-phase-num">Phase 3 · Month 2–4</div>
+        <div class="arc-phase-label" style="color:#0050D0;">Agent drafts</div>
+        <div class="arc-phase-sub" style="color:#0050D0;">Autonomous output</div>
+        <div class="arc-phase-desc">Regulator reports, maintenance schedules, intervention rankings — produced autonomously on a schedule. Humans review, approve, and send. Zero analyst hours for first draft.</div>
+        <div class="arc-phase-badge" style="background:#e5f0ff;color:#0050D0;border:1px solid #0050D0;">Phase 3</div>
+      </div>
+      <div class="arc-phase" style="border-bottom:3px solid #007040;">
+        <div class="arc-phase-num">Phase 4 · Month 4+</div>
+        <div class="arc-phase-label" style="color:#007040;">Agent acts</div>
+        <div class="arc-phase-sub" style="color:#007040;">Human-in-loop</div>
+        <div class="arc-phase-desc">With human approval, the agent triggers downstream workflows: maintenance scheduling systems, partner agency notifications, budget allocation drafts. Humans set policy; agents execute.</div>
+        <div class="arc-phase-badge" style="background:#e5f5ee;color:#007040;border:1px solid #007040;">Scale</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:16px 20px;background:#f7f7f9;border-radius:6px;font-size:13px;color:#505050;line-height:1.6;">
+      <strong style="color:#111;">The human role changes — it doesn't disappear.</strong> In every phase, humans set the objectives, review the outputs, and make the decisions that matter. The agent removes the mechanical work — pulling data, formatting tables, drafting first versions — so the human can focus on judgment, accountability, and action.
+    </div>
+  </div>
+
+  <!-- ── How it's built ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-gray">Under the hood</div>
+    <h2 style="font-size:28px;font-weight:800;">The stack is not the story. But here it is.</h2>
+    <p class="lead">The agent runs on a lean open-source infrastructure stack at ~€50/month. The architecture is deliberately simple — a PoC that proves the pattern, not the production system.</p>
+
+    <div class="stack-callout">
+      <div style="flex:1;min-width:200px;">
+        <div class="stack-callout-label">Powered by</div>
+        <div class="stack-pills">
+          <span class="stack-pill">Claude Haiku · Bedrock</span>
+          <span class="stack-pill">DuckDB httpfs</span>
+          <span class="stack-pill">Apache Iceberg v2</span>
+          <span class="stack-pill">FastAPI · ECS Fargate</span>
+          <span class="stack-pill">S3 · CloudFront</span>
+          <span class="stack-pill">GitHub Actions CI/CD</span>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;display:flex;flex-direction:column;gap:8px;min-width:180px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#505050;">Monthly cost</div>
+        <div style="font-size:36px;font-weight:900;color:#007040;letter-spacing:-0.02em;">~€50</div>
+        <div style="font-size:12px;color:#707070;">Fargate · ALB · CloudFront · S3 · Bedrock</div>
+        <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/architecture.html" style="font-size:12px;font-weight:600;color:#A100FF;text-decoration:none;margin-top:4px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Full architecture breakdown →</a>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="layers">
+        <div class="layer layer-bronze">
+          <div class="layer-label">Data</div>
+          <div class="layer-desc"><strong>569M vehicle records from BASt open data (Jan–Jun 2026)</strong>, stored as Parquet on S3 in Apache Iceberg v2 format. Queried live by DuckDB over httpfs — no data warehouse, no ETL pipeline, no cluster to manage.</div>
+        </div>
+        <div class="layer layer-silver">
+          <div class="layer-label">Agent</div>
+          <div class="layer-desc"><strong>Claude Haiku via Amazon Bedrock Converse API</strong>, running an agentic tool-use loop. The agent decides when to call <code style="font-size:11px;background:#f0f0f0;padding:1px 5px;border-radius:2px;">execute_sql</code>, writes the SQL, runs it, reads the result, and synthesises the answer — all within a single streaming response.</div>
+        </div>
+        <div class="layer layer-gold">
+          <div class="layer-label">API</div>
+          <div class="layer-desc"><strong>FastAPI on ECS Fargate</strong> behind an ALB and CloudFront HTTPS endpoint. The <code style="font-size:11px;background:#f0f0f0;padding:1px 5px;border-radius:2px;">/api/ask</code> endpoint streams Server-Sent Events back to the browser — so the answer appears token-by-token, like a conversation.</div>
+        </div>
+        <div class="layer layer-platinum">
+          <div class="layer-label">CI/CD</div>
+          <div class="layer-desc"><strong>GitHub Actions</strong> builds the Docker image, pushes to ECR, and deploys to ECS on every push to <code style="font-size:11px;background:#f0f0f0;padding:1px 5px;border-radius:2px;">api/</code>. The frontend deploys to S3 static hosting. Zero manual deployment steps.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Accenture Angle ── -->
+  <div class="section">
+    <div class="divider"></div>
+    <div class="tag tag-purple">The Accenture Angle</div>
+    <h2 style="font-size:28px;font-weight:800;">The technology is table stakes. Here's the actual differentiation.</h2>
+    <p class="lead">Any team can deploy Claude and connect it to a database. What Accenture brings is the three layers that turn a demo into a reinvented operation.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px;">
+
+      <div style="background:#fff;border:1.5px solid #e0e0e0;border-radius:6px;overflow:hidden;">
+        <div style="height:4px;background:#A100FF;"></div>
+        <div style="padding:24px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#A100FF;margin-bottom:8px;">Layer 1</div>
+          <div style="font-size:16px;font-weight:800;color:#111;margin-bottom:8px;">Domain → Agent translation</div>
+          <div style="font-size:13px;color:#505050;line-height:1.6;">An LLM connected to a database is a tool. An agent that knows what "incident risk" means for this client's operational context — and what questions to ask, what thresholds matter, what outputs get acted on — is a capability. That translation is not a technology problem. It is a domain problem solved by forward-deployed engineers embedded in operations.</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #e0e0e0;border-radius:6px;overflow:hidden;">
+        <div style="height:4px;background:#0050D0;"></div>
+        <div style="padding:24px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#0050D0;margin-bottom:8px;">Layer 2</div>
+          <div style="font-size:16px;font-weight:800;color:#111;margin-bottom:8px;">Ontology, not just SQL</div>
+          <div style="font-size:13px;color:#505050;line-height:1.6;">The agent's value compounds when it understands business objects — Station, Corridor, Incident, Maintenance Window — not just table schemas. Accenture's Agentic Process Reinvention Partners build the ontology that connects raw data to real decisions, using the same pattern whether the underlying stack is Iceberg, Databricks, or Palantir.</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #e0e0e0;border-radius:6px;overflow:hidden;">
+        <div style="height:4px;background:#007040;"></div>
+        <div style="padding:24px;">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#007040;margin-bottom:8px;">Layer 3</div>
+          <div style="font-size:16px;font-weight:800;color:#111;margin-bottom:8px;">Adoption as the product</div>
+          <div style="font-size:13px;color:#505050;line-height:1.6;">Technology adoption fails without behavioural change. The ops team that doesn't trust the agent, doesn't use it. The analyst who sees it as a threat, blocks it. Accenture's Talent &amp; Organisation practice drives the human transformation alongside the technical one — because the ROI lives in the changed behaviour, not the deployed model.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Closing dark bar -->
+    <div style="margin-top:24px;padding:24px 28px;background:#0d1117;border-radius:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">The agent is the new worker. Accenture builds the worker, trains the team, and measures the reinvention.</div>
+        <div style="font-size:13px;color:#8b949e;line-height:1.6;">AI Refinery™ · Applied Intelligence · Agentic Process Reinvention · Talent &amp; Organization · 360° Value Measurement</div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:#A100FF;white-space:nowrap;flex-shrink:0;">Let there be change.</div>
+    </div>
+  </div>
+
+<footer>
+  <span>BASt Traffic Demo · Agentic Reinvention · Open Data · 2026</span>
+  <span>Agent: Claude Haiku · Bedrock · DuckDB · FastAPI · ECS Fargate · Apache Iceberg · S3</span>
+</footer>
+
+</div>
+</body>
+</html>

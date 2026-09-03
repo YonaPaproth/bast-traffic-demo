@@ -74,7 +74,7 @@ def get_con() -> duckdb.DuckDBPyConnection:
 
 def parquet_source() -> str:
     """Return DuckDB read_parquet expression."""
-    return f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
+    return f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false, union_by_name=true)"
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────

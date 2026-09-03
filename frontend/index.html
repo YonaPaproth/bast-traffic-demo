@@ -238,7 +238,7 @@
  <div class="divider-purple"></div>
  <div class="section-label">Year-over-Year</div>
  <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">H1 2025 vs H1 2026 — Traffic Change</h2>
- <p style="font-size:14px;color:#505050;margin-top:8px;max-width:640px;">Comparing January–June 2025 with January–June 2026 across all 1,943 stations. Tracking PKW (passenger cars) and SV (Schwerverkehr = heavy traffic) separately.</p>
+ <p style="font-size:14px;color:#505050;margin-top:8px;max-width:640px;">Comparing January–June 2025 with January–June 2026 across 1,848 matched counting stations. KFZ = all vehicle types; PKW = passenger cars; SV = Schwerverkehr (heavy traffic).</p>
  </div>
 
  <!-- Delta KPIs -->
@@ -918,7 +918,7 @@ async function loadYoY() {
  }, { responsive: true, displayModeBar: false });
 
  } catch (e) {
- document.getElementById('yoy-kpis').innerHTML = `<div style="color:#888;font-size:13px;grid-column:1/-1;padding:16px 0;">YoY data unavailable — 2025 data not yet uploaded (${e.message})</div>`;
+ document.getElementById('yoy-kpis').innerHTML = `<div style="color:#888;font-size:13px;grid-column:1/-1;padding:16px 0;">YoY data temporarily unavailable — please refresh the page. (${e.message})</div>`;
  }
 }
 

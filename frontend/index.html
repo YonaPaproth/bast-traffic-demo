@@ -564,9 +564,15 @@ async function loadStations() {
 
 // ── Hourly profile ────────────────────────────────────
 async function loadHourly(stationId) {
-  const container = document.getElementById('chart-hourly');
   const dateInput = document.getElementById('hourly-date');
   const date = dateInput ? dateInput.value : '2026-01-15';
+
+  // Replace the div entirely so Plotly has zero prior axis state to inherit
+  const _old = document.getElementById('chart-hourly');
+  const _new = document.createElement('div');
+  _new.id = 'chart-hourly';
+  _new.style.width = '100%';
+  _old.parentNode.replaceChild(_new, _old);
 
   try {
     const r = await fetch(`${API_BASE}/api/traffic/hourly?station_id=${stationId}&date=${date}`);
@@ -581,6 +587,7 @@ async function loadHourly(stationId) {
       r1Data.push(byH[h] ? byH[h].kfz_r1 : 0);
     }
 
+    const yMax = Math.max(...r1Data, 1);
     Plotly.newPlot('chart-hourly', [{
       x: labels,
       y: r1Data,
@@ -593,14 +600,25 @@ async function loadHourly(stationId) {
       fillcolor: 'rgba(161,0,255,0.07)',
       hovertemplate: '<b>%{x}</b><br>%{y:,.0f} vehicles<extra></extra>',
     }], {
-      ...LAYOUT_BASE,
+      paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
+      font: LAYOUT_BASE.font,
       height: 320,
       margin: { t: 16, r: 24, b: 52, l: 72 },
-      yaxis: { ...LAYOUT_BASE.yaxis, tickformat: ',.0f', title: { text: 'Vehicles / hour', font: { size: 11 } } },
+      yaxis: {
+        type: 'linear',
+        range: [0, Math.ceil(yMax * 1.12 / 100) * 100],
+        tickformat: ',.0f',
+        gridcolor: '#f0f0f0',
+        zerolinecolor: '#e8e8e8',
+        tickfont: { size: 11, color: '#505050' },
+        title: { text: 'Vehicles / hour', font: { size: 11 } },
+      },
       xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10 } },
+      hoverlabel: LAYOUT_BASE.hoverlabel,
     }, { responsive: true, displayModeBar: false });
   } catch(e) {
-    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No data for this station and date.</div>';
+    document.getElementById('chart-hourly').innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No data for this station and date.</div>';
   }
 }
 

@@ -739,7 +739,7 @@ async function loadMap() {
  function radius(v) { return 4 + (v / max) * 10; }
 
  const trace = {
- type: 'scattermapbox',
+ type: 'scattergeo',
  lat: stations.map(s => s.lat),
  lon: stations.map(s => s.lon),
  mode: 'markers',
@@ -755,10 +755,21 @@ async function loadMap() {
  };
 
  const layout = {
- mapbox: { style: 'carto-positron', center: { lat: 51.2, lon: 10.4 }, zoom: 5 },
  paper_bgcolor: '#ffffff',
  margin: { t:0, r:0, b:0, l:0 },
  height: 520,
+ geo: {
+   scope: 'europe',
+   projection: { type: 'mercator' },
+   showland: true, landcolor: '#f5f5f5',
+   showocean: true, oceancolor: '#e8f0f8',
+   showcountries: true, countrycolor: '#bbbbbb', countrywidth: 0.8,
+   showcoastlines: true, coastlinecolor: '#bbbbbb', coastlinewidth: 0.8,
+   showframe: false,
+   lonaxis: { range: [5.5, 15.5] },
+   lataxis: { range: [47.0, 55.5] },
+   bgcolor: '#ffffff',
+ },
  };
 
  Plotly.newPlot('map-chart', [trace], layout, { responsive: true, displayModeBar: false });
@@ -823,7 +834,7 @@ function toggleMapFullscreen() {
  if (_mapData) {
  const max = Math.max(..._mapData.map(s => s.kfz_total));
  const trace = {
- type: 'scattermapbox',
+ type: 'scattergeo',
  lat: _mapData.map(s => s.lat),
  lon: _mapData.map(s => s.lon),
  mode: 'markers',
@@ -831,16 +842,28 @@ function toggleMapFullscreen() {
  size: _mapData.map(s => 4 + (s.kfz_total/max)*12),
  color: _mapData.map(s => s.kfz_total),
  colorscale: [[0,'#99CC99'],[0.3,'#006000'],[0.7,'#007F00'],[1,'#003800']],
+ colorbar: { title: 'Vehicles/Month', titlefont: {size:11,color:'#505050'}, tickformat:',.0f', len:0.5, thickness:12, x:1.01, tickfont:{size:10,color:'#505050'} },
  opacity: 0.85,
  },
  text: _mapData.map(s => `<b>${s.station_name||s.station_id}</b><br>${s.state} · ${s.road_class}${s.road_number}<br>${(s.kfz_total/1e6).toFixed(2)}M Vehicles`),
  hovertemplate: '%{text}<extra></extra>',
  };
  Plotly.newPlot('map-chart-fullscreen', [trace], {
- mapbox: { style: 'carto-positron', center: { lat: 51.2, lon: 10.4 }, zoom: 5.5 },
  paper_bgcolor: '#ffffff',
  margin: { t:0, r:0, b:0, l:0 },
  height: window.innerHeight - 52,
+ geo: {
+   scope: 'europe',
+   projection: { type: 'mercator' },
+   showland: true, landcolor: '#f5f5f5',
+   showocean: true, oceancolor: '#e8f0f8',
+   showcountries: true, countrycolor: '#bbbbbb', countrywidth: 0.8,
+   showcoastlines: true, coastlinecolor: '#bbbbbb', coastlinewidth: 0.8,
+   showframe: false,
+   lonaxis: { range: [5.5, 15.5] },
+   lataxis: { range: [47.0, 55.5] },
+   bgcolor: '#ffffff',
+ },
  }, { responsive: true, displayModeBar: true });
  }
  }

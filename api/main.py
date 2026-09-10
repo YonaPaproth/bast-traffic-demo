@@ -200,6 +200,7 @@ def get_traffic_overview():
             SELECT
                 date::DATE                AS date,
                 SUM(kfz_total)            AS kfz_total,
+                SUM(kfz_r1)               AS kfz_r1,
                 SUM(COALESCE(sv_r1, 0))   AS sv_total
             FROM {parquet_source()}
             GROUP BY date::DATE

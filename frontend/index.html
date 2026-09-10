@@ -468,21 +468,21 @@ async function loadOverview() {
  Plotly.newPlot('chart-daily', [
  {
    x: daily2025.map(r => alignDay(r.date)),
-   y: daily2025.map(r => r.kfz_total),
+   y: daily2025.map(r => r.kfz_r1),
    name: 'KFZ 2025',
    type: 'scatter', mode: 'lines',
    line: { color: '#999999', width: 2, shape: 'spline', dash: 'dot' },
    opacity: 0.85,
-   hovertemplate: '<b>%{x|%b %d} 2025</b><br>KFZ: %{y:,.0f}<extra></extra>',
+   hovertemplate: '<b>%{x|%b %d} 2025</b><br>KFZ Dir.1: %{y:,.0f}<extra></extra>',
  },
  {
    x: daily2026.map(r => alignDay(r.date)),
-   y: daily2026.map(r => r.kfz_total),
+   y: daily2026.map(r => r.kfz_r1),
    name: 'KFZ 2026',
    type: 'scatter', mode: 'lines',
    line: { color: '#A100FF', width: 2.5, shape: 'spline' },
    fill: 'tozeroy', fillcolor: 'rgba(161,0,255,0.06)',
-   hovertemplate: '<b>%{x|%b %d} 2026</b><br>KFZ: %{y:,.0f}<extra></extra>',
+   hovertemplate: '<b>%{x|%b %d} 2026</b><br>KFZ Dir.1: %{y:,.0f}<extra></extra>',
  },
  {
    x: daily2025.map(r => alignDay(r.date)),

@@ -142,7 +142,7 @@
  </div>
  </div>
  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
- <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/architecture.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#007F00;text-decoration:none;padding:5px 10px;border:1.5px solid #007F00;border-radius:2px;white-space:nowrap;" onmouseover="this.style.background='#e5f3e5'" onmouseout="this.style.background='transparent'">
+ <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/architecture.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#007F00;text-decoration:none;padding:5px 10px;border:1.5px solid #007F00;border-radius:2px;white-space:nowrap;" onmouseover="this.style.background='#f3e5ff'" onmouseout="this.style.background='transparent'">
  ️ <span style="display:none;" class="nav-label"> Architecture &amp; Strategy</span><span>Architecture</span>
  </a>
  <span class="badge-outline" style="white-space:nowrap;font-size:11px;">Open Data</span>
@@ -461,7 +461,7 @@ async function loadOverview() {
  kpiCard(fmt(weAvg), 'Avg. Weekend Traffic', 'Saturday + Sunday'),
  ].join('');
 
- // Daily area chart — 2 overlaid lines aligned on Jan-Jun axis
+ // Daily area chart — KFZ + SV overlaid lines aligned on Jan-Jun axis
  const alignDay = s => '2000-' + s.slice(5); // strip year so both lines share x-axis
  const daily2025 = d.daily_totals.filter(r => r.date.startsWith('2025-'));
  const daily2026 = d.daily_totals.filter(r => r.date.startsWith('2026-'));
@@ -469,20 +469,38 @@ async function loadOverview() {
  {
    x: daily2025.map(r => alignDay(r.date)),
    y: daily2025.map(r => r.kfz_total),
-   name: 'H1 2025',
+   name: 'KFZ 2025',
    type: 'scatter', mode: 'lines',
    line: { color: '#999999', width: 2, shape: 'spline', dash: 'dot' },
    opacity: 0.85,
-   hovertemplate: '<b>%{x|%b %d} 2025</b><br>%{y:,.0f} Vehicles<extra></extra>',
+   hovertemplate: '<b>%{x|%b %d} 2025</b><br>KFZ: %{y:,.0f}<extra></extra>',
  },
  {
    x: daily2026.map(r => alignDay(r.date)),
    y: daily2026.map(r => r.kfz_total),
-   name: 'H1 2026',
+   name: 'KFZ 2026',
    type: 'scatter', mode: 'lines',
    line: { color: '#007F00', width: 2.5, shape: 'spline' },
    fill: 'tozeroy', fillcolor: 'rgba(0,127,0,0.06)',
-   hovertemplate: '<b>%{x|%b %d} 2026</b><br>%{y:,.0f} Vehicles<extra></extra>',
+   hovertemplate: '<b>%{x|%b %d} 2026</b><br>KFZ: %{y:,.0f}<extra></extra>',
+ },
+ {
+   x: daily2025.map(r => alignDay(r.date)),
+   y: daily2025.map(r => r.sv_total || 0),
+   name: 'SV 2025',
+   type: 'scatter', mode: 'lines',
+   line: { color: '#FF8C00', width: 1.5, shape: 'spline', dash: 'dot' },
+   opacity: 0.85,
+   hovertemplate: 'SV: %{y:,.0f}<extra></extra>',
+ },
+ {
+   x: daily2026.map(r => alignDay(r.date)),
+   y: daily2026.map(r => r.sv_total || 0),
+   name: 'SV 2026',
+   type: 'scatter', mode: 'lines',
+   line: { color: '#FF8C00', width: 2, shape: 'spline' },
+   fill: 'tozeroy', fillcolor: 'rgba(255,140,0,0.06)',
+   hovertemplate: 'SV: %{y:,.0f}<extra></extra>',
  },
  ], {
  ...LAYOUT_BASE,
@@ -630,26 +648,40 @@ const MONTH_LABELS = {
 
 async function loadHourlyPattern(month) {
   month = month || '2026-06';
+  const [, mon] = month.split('-');
+  const month2025 = `2025-${mon}`;
+  const label2026 = MONTH_LABELS[month] || month;
+  const label2025 = label2026.replace('2026', '2025');
+
   document.getElementById('pattern-subtitle').textContent =
-    `${MONTH_LABELS[month] || month} · Average across all 1,943 counting stations`;
+    `${label2026} vs ${label2025} · Average across all 1,943 counting stations`;
   try {
-    const r = await fetch(`${API_BASE}/api/traffic/hourly-pattern?month=${month}`);
-    const rows = await r.json();
-    const byH = {};
-    rows.forEach(row => { byH[row.hour] = row.avg_kfz; });
+    // Fetch both years in parallel; 2025 falls back to [] if not available
+    const [rows2026, rows2025] = await Promise.all([
+      fetch(`${API_BASE}/api/traffic/hourly-pattern?month=${month}`).then(r => r.json()),
+      fetch(`${API_BASE}/api/traffic/hourly-pattern?month=${month2025}`)
+        .then(r => r.ok ? r.json() : []).catch(() => []),
+    ]);
+
     // BASt hours are 1-24 (hour 1 = 00:00-01:00, hour 24 = 23:00-00:00)
     const hours = Array.from({length: 24}, (_, h) => h);
-    const vals  = hours.map(h => byH[h + 1] ?? 0);
     const labels = hours.map(h => `${String(h).padStart(2,'0')}:00`);
 
+    const byH2026 = {};
+    rows2026.forEach(row => { byH2026[row.hour] = row.avg_kfz; });
+    const byH2025 = {};
+    rows2025.forEach(row => { byH2025[row.hour] = row.avg_kfz; });
+
+    const vals2026 = hours.map(h => byH2026[h + 1] ?? 0);
+    const vals2025 = hours.map(h => byH2025[h + 1] ?? null);
+    const has2025 = vals2025.some(v => v !== null);
+
     // colour bars by value (darker = more traffic)
-    const max = Math.max(...vals);
-    const barColors = vals.map(v => {
+    const max = Math.max(...vals2026, ...(has2025 ? vals2025.filter(v => v !== null) : [0]));
+    const barColors = vals2026.map(v => {
       const t = max > 0 ? v / max : 0;
-      const r = Math.round(161 + (80 - 161) * t);
-      const g = Math.round(0);
-      const b = Math.round(255);
-      return `rgba(${r},${g},${b},${0.35 + 0.65 * t})`;
+      const g = Math.round(127 + (64 - 127) * t);
+      return `rgba(0,${g},0,${0.35 + 0.65 * t})`;
     });
 
     // Replace the div entirely so Plotly has zero prior state to inherit
@@ -659,21 +691,36 @@ async function loadHourlyPattern(month) {
     _newDiv.style.width = '100%';
     _oldDiv.parentNode.replaceChild(_newDiv, _oldDiv);
 
-    // Compute explicit Y-axis scale from this month's data
+    // Compute explicit Y-axis scale
     const yMax = max > 0 ? Math.ceil(max * 1.15 / 100) * 100 : 100;
     const yDtick = yMax <= 300 ? 50 : yMax <= 800 ? 100 : yMax <= 1600 ? 200 : 500;
 
-    Plotly.newPlot('chart-pattern', [{
-      x: labels,
-      y: vals,
+    const traces = [{
+      x: labels, y: vals2026,
       type: 'bar',
+      name: label2026,
       marker: { color: barColors, line: { width: 0 } },
-      hovertemplate: '<b>%{x}</b><br>Avg %{y:,.0f} vehicles/hour<extra></extra>',
-    }], {
+      hovertemplate: `<b>%{x}</b><br>${label2026}: %{y:,.0f} veh/h<extra></extra>`,
+    }];
+
+    if (has2025) {
+      traces.push({
+        x: labels, y: vals2025,
+        type: 'scatter', mode: 'lines+markers',
+        name: label2025,
+        line: { color: '#999999', width: 2, dash: 'dot' },
+        marker: { color: '#999999', size: 4 },
+        hovertemplate: `<b>%{x}</b><br>${label2025}: %{y:,.0f} veh/h<extra></extra>`,
+      });
+    }
+
+    Plotly.newPlot('chart-pattern', traces, {
       ...LAYOUT_BASE,
       height: 340,
       margin: { t: 16, r: 24, b: 52, l: 80 },
       bargap: 0.15,
+      legend: { orientation: 'h', y: 1.1, x: 0.5, xanchor: 'center',
+                font: { size: 11, color: '#505050' }, bgcolor: 'rgba(0,0,0,0)' },
       yaxis: {
         gridcolor: '#f0f0f0',
         zerolinecolor: '#e8e8e8',
@@ -893,7 +940,7 @@ function toggleMapFullscreen() {
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
 </div>
 
-<div id="chat-panel" style="position:fixed;bottom:96px;right:28px;width:390px;max-height:540px;background:#fff;border-radius:16px;box-shadow:0 8px 48px rgba(0,0,0,0.18);z-index:999;display:none;flex-direction:column;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;border:1px solid #e6f0e6;">
+<div id="chat-panel" style="position:fixed;bottom:96px;right:28px;width:390px;max-height:540px;background:#fff;border-radius:16px;box-shadow:0 8px 48px rgba(0,0,0,0.18);z-index:999;display:none;flex-direction:column;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;border:1px solid #f0e6ff;">
   <div style="background:#007F00;color:#fff;padding:14px 20px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;letter-spacing:0.01em;">
     <span>Ask about BASt Traffic Data</span>
     <span onclick="toggleChat()" style="cursor:pointer;font-size:20px;opacity:0.75;line-height:1;">&times;</span>

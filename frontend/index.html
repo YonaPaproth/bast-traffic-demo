@@ -461,7 +461,7 @@ async function loadOverview() {
  kpiCard(fmt(weAvg), 'Avg. Weekend Traffic', 'Saturday + Sunday'),
  ].join('');
 
- // Daily area chart — 2 overlaid lines aligned on Jan-Jun axis
+ // Daily area chart — KFZ + SV overlaid lines aligned on Jan-Jun axis
  const alignDay = s => '2000-' + s.slice(5); // strip year so both lines share x-axis
  const daily2025 = d.daily_totals.filter(r => r.date.startsWith('2025-'));
  const daily2026 = d.daily_totals.filter(r => r.date.startsWith('2026-'));
@@ -469,20 +469,38 @@ async function loadOverview() {
  {
    x: daily2025.map(r => alignDay(r.date)),
    y: daily2025.map(r => r.kfz_total),
-   name: 'H1 2025',
+   name: 'KFZ 2025',
    type: 'scatter', mode: 'lines',
    line: { color: '#999999', width: 2, shape: 'spline', dash: 'dot' },
    opacity: 0.85,
-   hovertemplate: '<b>%{x|%b %d} 2025</b><br>%{y:,.0f} Vehicles<extra></extra>',
+   hovertemplate: '<b>%{x|%b %d} 2025</b><br>KFZ: %{y:,.0f}<extra></extra>',
  },
  {
    x: daily2026.map(r => alignDay(r.date)),
    y: daily2026.map(r => r.kfz_total),
-   name: 'H1 2026',
+   name: 'KFZ 2026',
    type: 'scatter', mode: 'lines',
    line: { color: '#A100FF', width: 2.5, shape: 'spline' },
    fill: 'tozeroy', fillcolor: 'rgba(161,0,255,0.06)',
-   hovertemplate: '<b>%{x|%b %d} 2026</b><br>%{y:,.0f} Vehicles<extra></extra>',
+   hovertemplate: '<b>%{x|%b %d} 2026</b><br>KFZ: %{y:,.0f}<extra></extra>',
+ },
+ {
+   x: daily2025.map(r => alignDay(r.date)),
+   y: daily2025.map(r => r.sv_total || 0),
+   name: 'SV 2025',
+   type: 'scatter', mode: 'lines',
+   line: { color: '#FF8C00', width: 1.5, shape: 'spline', dash: 'dot' },
+   opacity: 0.85,
+   hovertemplate: 'SV: %{y:,.0f}<extra></extra>',
+ },
+ {
+   x: daily2026.map(r => alignDay(r.date)),
+   y: daily2026.map(r => r.sv_total || 0),
+   name: 'SV 2026',
+   type: 'scatter', mode: 'lines',
+   line: { color: '#FF8C00', width: 2, shape: 'spline' },
+   fill: 'tozeroy', fillcolor: 'rgba(255,140,0,0.06)',
+   hovertemplate: 'SV: %{y:,.0f}<extra></extra>',
  },
  ], {
  ...LAYOUT_BASE,

@@ -198,8 +198,9 @@ def get_traffic_overview():
     try:
         daily_df = con.execute(f"""
             SELECT
-                date::DATE        AS date,
-                SUM(kfz_total)    AS kfz_total
+                date::DATE                AS date,
+                SUM(kfz_total)            AS kfz_total,
+                SUM(COALESCE(sv_r1, 0))   AS sv_total
             FROM {parquet_source()}
             GROUP BY date::DATE
             ORDER BY date::DATE

@@ -95,9 +95,9 @@ data: {"type":"done"}
 - **Raw ZIPs on S3:** `s3://bast-traffic-demo-112220711619/raw/` — 2026 Feb–Jun ZIPs only; Jan 2026 ZIP not uploaded
 - **2025 raw data:** locally in `data/raw/DZ_2025_0X_Rohdaten/` (months 01–06); not on S3
 
-**Parser (S-line aware, current):** `parse_bast.py` reads the `S02 NN TYPE...` header line per station to find the PKW column offset dynamically (`pkw_offset = 12 + sub_index`). Stations with S02 06 format (no Pkw type) get `pkw_r1 = 0`. Fixed `kfz_r2 = int(values[2])` (was `values[1]`). `sv_r1 = int(values[1])` is always Schwerverkehr or Lkw — the heavy-traffic proxy.
+**Parser (R-line + S-line aware, current):** `parse_bast.py` reads the `R02`/`R03` header to get the format number (R02=2-lane/44 values, R03=3-lane/66 values), then reads the `S02 NN TYPE...` header to find PKW position: `pkw_offset = 4 * r_number + sub_index`. Stations with S02 06 format (no Pkw type) get `pkw_r1 = 0`. `sv_r1 = int(values[1])` is always the pre-computed Schwerverkehr aggregate — correct for all formats.
 
-**PKW share (~12.5%):** The aggregate PKW_R1 / KFZ_R1 across all stations is ~12.5%, not the ~75-85% expected for German Autobahn. This is because ~50% of stations use S02 06 format (no per-vehicle-type breakdown), so their pkw_r1=0 pulls the aggregate down. The data is correct — many permanent counting stations only report totals.
+**PKW share:** After the R-line fix, PKW share for stations that report PKW should be ~40-50% of KFZ_R1 (typical German Autobahn). The overall aggregate is lower because stations with S02 06 format (no per-vehicle-type breakdown) report pkw_r1=0.
 
 ---
 

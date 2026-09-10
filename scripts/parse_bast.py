@@ -103,15 +103,13 @@ def parse_station_file(path: Path, meta: dict) -> list[dict]:
     station_num = int(numeric_match.group(1)) if numeric_match else None
     station_meta = meta.get(station_num, {})
 
-    # Per-station column layout derived from S-line header.
-    # BASt Bestandsbandformat S-line: "S02 nn TYPE1 TYPE2 TYPE3 ..."
-    # Empirically validated column positions for all stations:
-    #   values[0] = KFZ_R1  (total vehicles direction 1)
-    #   values[1] = second type R1  (SV=Schwerverkehr, or Lkw, depending on format)
-    #   values[2] = KFZ_R2  (total vehicles direction 2)
-    #   values[12 + k] = (k+1)-th sub-type R1  (types after KFZ and 2nd-type)
-    # pkw_offset is the index into values[] for passenger cars direction 1.
+    # Per-station column layout derived from R-line and S-line headers.
+    # R-line: "R02 ..." → r_number=2 (2-lane, 44 values/row, sub-types at values[8])
+    #         "R03 ..." → r_number=3 (3-lane, 66 values/row, sub-types at values[12])
+    # Sub-type start = 4 * r_number; pkw_offset = 4*r_number + sub_index
+    # values[0]=KFZ_R1, values[1]=SV_R1 (pre-computed aggregate, always correct)
     pkw_offset = None   # None = no Pkw column in this station's format
+    r_number = 3        # default to R03 (most common); overridden by R-line
 
     records = []
     try:
@@ -121,20 +119,25 @@ def parse_station_file(path: Path, meta: dict) -> list[dict]:
                 if not line:
                     continue
 
+                # Parse R-line to get format number (R02 vs R03)
+                if line.startswith("R"):
+                    try:
+                        r_number = int(line[1:3])
+                    except ValueError:
+                        pass
+                    continue
+
                 # Parse S-line to determine column layout for this station
                 if line.startswith("S"):
                     parts = line.rstrip(";").split()
                     if len(parts) >= 3:
                         type_names = [p.upper() for p in parts[2:]]
-                        # First two types are always aggregates (KFZ + SV/Lkw);
-                        # remaining types are sub-types starting at values[12].
                         if "PKW" in type_names:
-                            # Sub-types start after the first 2 types (KFZ and SV/Lkw).
                             sub_index = type_names[2:].index("PKW")
-                            pkw_offset = 12 + sub_index
+                            pkw_offset = 4 * r_number + sub_index
                     continue
 
-                if line[0] in ("H", "R"):
+                if line[0] == "H":
                     continue
 
                 m = DATA_LINE_RE.match(line)

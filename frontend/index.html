@@ -935,6 +935,34 @@ function toggleMapFullscreen() {
  }
 </style>
 
+<!-- ── Actions Panel ───────────────────────────────────────────────────── -->
+<div id="actions-btn" onclick="toggleActions()" title="Action queue" style="position:fixed;bottom:28px;left:28px;z-index:1000;background:#fff;color:#A100FF;border:2px solid #A100FF;border-radius:50%;width:56px;height:56px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(161,0,255,0.18);user-select:none;">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  <span id="actions-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#A100FF;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;line-height:1;"></span>
+</div>
+
+<div id="actions-panel" style="position:fixed;bottom:96px;left:28px;width:420px;max-height:580px;background:#fff;border-radius:16px;box-shadow:0 8px 48px rgba(0,0,0,0.18);z-index:999;display:none;flex-direction:column;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;border:1px solid #f0e6ff;">
+  <!-- Header -->
+  <div style="background:#A100FF;color:#fff;padding:14px 20px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;letter-spacing:0.01em;">
+    <span>Action Queue</span>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button onclick="loadActions()" title="Refresh" style="background:none;border:none;color:#fff;cursor:pointer;opacity:0.8;padding:0;display:flex;" id="actions-refresh-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+      <span onclick="toggleActions()" style="cursor:pointer;font-size:20px;opacity:0.75;line-height:1;">&times;</span>
+    </div>
+  </div>
+  <!-- Tabs -->
+  <div style="display:flex;border-bottom:1px solid #f0f0f0;background:#fafafa;">
+    <button id="tab-pending" onclick="switchTab('pending')" style="flex:1;padding:10px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:#A100FF;border-bottom:2px solid #A100FF;letter-spacing:0.04em;text-transform:uppercase;">Pending <span id="pending-count"></span></button>
+    <button id="tab-log" onclick="switchTab('log')" style="flex:1;padding:10px;font-size:12px;font-weight:600;border:none;background:none;cursor:pointer;color:#999;border-bottom:2px solid transparent;letter-spacing:0.04em;text-transform:uppercase;">Log</button>
+  </div>
+  <!-- Body -->
+  <div id="actions-body" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:180px;max-height:460px;">
+    <div style="text-align:center;color:#bbb;font-size:13px;padding:24px 0;" id="actions-empty">No pending actions.</div>
+  </div>
+</div>
+
 <!-- ── Chat Panel ─────────────────────────────────────────────────────── -->
 <div id="chat-btn" onclick="toggleChat()" title="Ask about the data" style="position:fixed;bottom:28px;right:28px;z-index:1000;background:#A100FF;color:#fff;border:none;border-radius:50%;width:56px;height:56px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(161,0,255,0.35);font-size:22px;user-select:none;">
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -942,11 +970,11 @@ function toggleMapFullscreen() {
 
 <div id="chat-panel" style="position:fixed;bottom:96px;right:28px;width:390px;max-height:540px;background:#fff;border-radius:16px;box-shadow:0 8px 48px rgba(0,0,0,0.18);z-index:999;display:none;flex-direction:column;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;border:1px solid #f0e6ff;">
   <div style="background:#A100FF;color:#fff;padding:14px 20px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;letter-spacing:0.01em;">
-    <span>Ask about BASt Traffic Data</span>
+    <span>Traffic Operations Agent</span>
     <span onclick="toggleChat()" style="cursor:pointer;font-size:20px;opacity:0.75;line-height:1;">&times;</span>
   </div>
   <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:400px;">
-    <div class="chat-msg-assistant">Hi! Ask me anything about German highway traffic. Try: <em>"Which state has the busiest Autobahns?"</em> or <em>"What's the peak traffic hour?"</em></div>
+    <div class="chat-msg-assistant">Hi! I'm your traffic operations analyst. Try: <em>"Tell me about station NW5048"</em>, <em>"What's the situation on the A3 in NW?"</em>, or <em>"Recommend a maintenance window for that corridor."</em></div>
   </div>
   <div style="padding:12px 14px;border-top:1px solid #f0f0f0;display:flex;gap:8px;background:#fafafa;">
     <input id="chat-input" type="text" placeholder="Ask a question…" style="flex:1;border:1px solid #e0d0ff;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:inherit;color:#222;" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChat();}">
@@ -959,13 +987,166 @@ function toggleMapFullscreen() {
 .chat-msg-assistant { background:#f7f0ff;color:#1a0030;border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;max-width:92%;line-height:1.55;white-space:pre-wrap;word-break:break-word; }
 .chat-msg-status { font-size:11px;color:#999;align-self:center;font-style:italic; }
 #chat-messages { scroll-behavior:smooth; }
+
+.action-card { background:#fff;border:1px solid #eee;border-radius:10px;padding:14px 16px;font-size:13px; }
+.action-card-header { display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px; }
+.action-type-badge { font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;white-space:nowrap; }
+.badge-MAINTENANCE_RECOMMENDATION { background:#fff3cd;color:#856404; }
+.badge-ANOMALY_FLAG { background:#fce8e8;color:#a00; }
+.badge-REPORT_DRAFT { background:#e8f0fe;color:#1a56a0; }
+.status-approved { color:#15803d;font-weight:600; }
+.status-rejected { color:#b91c1c;font-weight:600; }
+.status-pending  { color:#92400e;font-weight:600; }
+.action-btn { border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .15s; }
+.action-btn:hover { opacity:.85; }
+.btn-approve { background:#15803d;color:#fff; }
+.btn-reject  { background:#fff;color:#b91c1c;border:1px solid #fca5a5; }
 </style>
 
 <script>
+// ── Actions panel ──────────────────────────────────────────────────────────
+let _actionsTab = 'pending';
+
+function toggleActions() {
+  const p = document.getElementById('actions-panel');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+  if (p.style.display === 'flex') loadActions();
+}
+
+function switchTab(tab) {
+  _actionsTab = tab;
+  const tabs = ['pending', 'log'];
+  tabs.forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    btn.style.color = t === tab ? '#A100FF' : '#999';
+    btn.style.borderBottom = t === tab ? '2px solid #A100FF' : '2px solid transparent';
+  });
+  loadActions();
+}
+
+async function loadActions() {
+  const body = document.getElementById('actions-body');
+  const status = _actionsTab === 'pending' ? 'pending' : null;
+  const url = status
+    ? `${API_BASE}/api/actions?status=pending`
+    : `${API_BASE}/api/actions`;
+
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    let actions = await r.json();
+
+    // Pending tab: only pending. Log tab: only resolved, with full history.
+    if (_actionsTab === 'log') {
+      const resolved = actions.filter(a => a.status !== 'pending');
+      // Fetch individual actions to get history (concurrent, fine for demo scale)
+      actions = await Promise.all(
+        resolved.map(a =>
+          fetch(`${API_BASE}/api/actions/${a.id}`)
+            .then(r => r.ok ? r.json() : a)
+            .catch(() => a)
+        )
+      );
+    }
+
+    // Update badge
+    const allPending = await fetch(`${API_BASE}/api/actions?status=pending`);
+    const pendingList = allPending.ok ? await allPending.json() : [];
+    const pendingCount = pendingList.length;
+    const badge = document.getElementById('actions-badge');
+    const countEl = document.getElementById('pending-count');
+    if (pendingCount > 0) {
+      badge.textContent = pendingCount;
+      badge.style.display = 'flex';
+      countEl.textContent = `(${pendingCount})`;
+    } else {
+      badge.style.display = 'none';
+      countEl.textContent = '';
+    }
+
+    body.innerHTML = '';
+    if (actions.length === 0) {
+      body.innerHTML = `<div style="text-align:center;color:#bbb;font-size:13px;padding:24px 0;">${_actionsTab === 'pending' ? 'No pending actions. Ask the agent to analyse a station or corridor.' : 'No resolved actions yet.'}</div>`;
+      return;
+    }
+
+    actions.forEach(a => {
+      const card = document.createElement('div');
+      card.className = 'action-card';
+      const proposed = new Date(a.proposed_at).toLocaleString('de-DE', {dateStyle:'short', timeStyle:'short'});
+      const badgeClass = 'badge-' + a.type;
+
+      let footer = '';
+      if (a.status === 'pending') {
+        footer = `
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="action-btn btn-approve" onclick="resolveAction('${a.id}','approved')">Approve</button>
+            <button class="action-btn btn-reject"  onclick="resolveAction('${a.id}','rejected')">Reject</button>
+          </div>`;
+      } else {
+        const hist = (a.history || []).find(h => h.status !== 'pending');
+        const resolvedBy = hist ? hist.changed_by : '—';
+        const resolvedAt = hist ? new Date(hist.changed_at).toLocaleString('de-DE', {dateStyle:'short', timeStyle:'short'}) : '—';
+        footer = `<div style="margin-top:8px;font-size:11px;color:#888;"><span class="status-${a.status}">${a.status.charAt(0).toUpperCase()+a.status.slice(1)}</span> by ${resolvedBy} · ${resolvedAt}</div>`;
+      }
+
+      card.innerHTML = `
+        <div class="action-card-header">
+          <div style="font-weight:600;color:#111;line-height:1.3;flex:1;">${escHtml(a.title)}</div>
+          <span class="action-type-badge ${badgeClass}">${a.type.replace('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}</span>
+        </div>
+        <div style="font-size:12px;color:#555;line-height:1.5;margin-bottom:4px;">${escHtml(a.description.slice(0,180))}${a.description.length>180?'…':''}</div>
+        <div style="font-size:11px;color:#aaa;">
+          ${escHtml(a.object_type || '')} · ${escHtml(a.object_id || '')} · snapshot ${escHtml((a.snapshot_id||'').slice(0,8))}… · ${proposed}
+        </div>
+        ${footer}`;
+      body.appendChild(card);
+    });
+  } catch(e) {
+    body.innerHTML = `<div style="color:#a00;font-size:13px;padding:16px;">Failed to load actions: ${escHtml(e.message)}</div>`;
+  }
+}
+
+async function resolveAction(id, status) {
+  const resolvedBy = 'Operations Team';
+  try {
+    const r = await fetch(`${API_BASE}/api/actions/${id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({status, resolved_by: resolvedBy}),
+    });
+    if (r.status === 409) {
+      alert('This action was already resolved by another request.');
+      loadActions();
+      return;
+    }
+    if (!r.ok) {
+      const d = await r.json().catch(()=>({detail:'Unknown error'}));
+      alert('Error: ' + (d.detail || r.status));
+      return;
+    }
+    loadActions();
+  } catch(e) {
+    alert('Network error: ' + e.message);
+  }
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Chat panel ─────────────────────────────────────────────────────────────
 function toggleChat() {
   const p = document.getElementById('chat-panel');
   p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
   if (p.style.display === 'flex') document.getElementById('chat-input').focus();
+}
+
+function _toolLabel(name, query) {
+  if (name === 'get_object' || (query && query.startsWith('get_object'))) return '[ Looking up domain object… ]';
+  if (name === 'create_action' || (query && query.startsWith('create_action'))) return '[ Proposing action… ]';
+  return '[ Querying data… ]';
 }
 
 async function sendChat() {
@@ -977,7 +1158,6 @@ async function sendChat() {
   document.getElementById('chat-send-btn').disabled = true;
 
   const box = document.getElementById('chat-messages');
-
   const uDiv = document.createElement('div');
   uDiv.className = 'chat-msg-user';
   uDiv.textContent = question;
@@ -990,6 +1170,7 @@ async function sendChat() {
   box.scrollTop = box.scrollHeight;
 
   let fullText = '';
+  let lastToolName = '';
 
   try {
     const resp = await fetch(`${API_BASE}/api/ask?q=${encodeURIComponent(question)}`);
@@ -1017,9 +1198,31 @@ async function sendChat() {
             fullText = 'Error: ' + evt.message;
             aDiv.textContent = fullText;
           } else if (evt.type === 'tool_start') {
-            aDiv.textContent = fullText || 'Querying data…';
+            lastToolName = evt.name || '';
+            aDiv.textContent = (fullText || '') + '\n\n' + _toolLabel(lastToolName, '');
           } else if (evt.type === 'tool_running') {
-            aDiv.textContent = (fullText || '') + '\n\n[ Running SQL… ]';
+            aDiv.textContent = (fullText || '') + '\n\n' + _toolLabel(lastToolName, evt.query || '');
+          } else if (evt.type === 'done') {
+            // Refresh actions panel silently — agent may have created a proposal
+            if (document.getElementById('actions-panel').style.display === 'flex') {
+              loadActions();
+            } else {
+              // Update badge even if panel is closed
+              fetch(`${API_BASE}/api/actions?status=pending`)
+                .then(r => r.ok ? r.json() : [])
+                .then(list => {
+                  const badge = document.getElementById('actions-badge');
+                  const countEl = document.getElementById('pending-count');
+                  if (list.length > 0) {
+                    badge.textContent = list.length;
+                    badge.style.display = 'flex';
+                    countEl.textContent = `(${list.length})`;
+                  } else {
+                    badge.style.display = 'none';
+                    countEl.textContent = '';
+                  }
+                }).catch(()=>{});
+            }
           }
           box.scrollTop = box.scrollHeight;
         } catch (_) {}

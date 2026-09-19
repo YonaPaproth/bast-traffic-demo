@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 import os
 import json
+import time as _time
 
 import boto3
 import duckdb
@@ -112,6 +113,25 @@ def parquet_source() -> str:
     if USE_S3 and _ICEBERG_META_LOCATION:
         return f"iceberg_scan('{_ICEBERG_META_LOCATION}')"
     return f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false, union_by_name=true)"
+
+
+# ── Response cache ────────────────────────────────────────────────────────────
+# Simple in-process TTL cache for slow, infrequently-changing endpoints.
+# Data updates only when new Parquet files are uploaded (monthly at most),
+# so a 1-hour TTL is safe. Cache resets on container restart / redeploy.
+_RESPONSE_CACHE: dict[str, tuple[float, object]] = {}
+_CACHE_TTL = 3600  # seconds
+
+
+def _cached(key: str, fn, ttl: int = _CACHE_TTL):
+    now = _time.monotonic()
+    if key in _RESPONSE_CACHE:
+        ts, val = _RESPONSE_CACHE[key]
+        if now - ts < ttl:
+            return val
+    val = fn()
+    _RESPONSE_CACHE[key] = (now, val)
+    return val
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────
@@ -231,10 +251,11 @@ def get_traffic_hourly(
 # ── Overview ──────────────────────────────────────────────────────────────────
 @app.get("/api/traffic/overview")
 def get_traffic_overview():
-    """
-    Total traffic per day (all stations) + top 10 stations by volume
-    + summary KPIs.
-    """
+    """Total traffic per day + top 10 stations + summary KPIs."""
+    return _cached("overview", _compute_overview)
+
+
+def _compute_overview():
     con = get_con()
     try:
         daily_df = con.execute(f"""
@@ -288,6 +309,10 @@ def get_traffic_overview():
 @app.get("/api/traffic/states")
 def get_traffic_states():
     """Traffic aggregated by German federal state (Landeskuerzel)."""
+    return _cached("states", _compute_states)
+
+
+def _compute_states():
     con = get_con()
     try:
         df = con.execute(f"""
@@ -346,10 +371,11 @@ def get_hourly_pattern(
 
 @app.get("/api/traffic/yoy")
 def get_traffic_yoy():
-    """
-    H1 2025 vs H1 2026 — PKW and SV (Schwerverkehr) by state and road class.
-    Returns by_state and by_road_class breakdowns.
-    """
+    """H1 2025 vs H1 2026 — PKW and SV by state and road class."""
+    return _cached("yoy", _compute_yoy)
+
+
+def _compute_yoy():
     con = get_con()
     try:
         src = parquet_source()

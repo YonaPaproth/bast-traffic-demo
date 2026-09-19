@@ -240,22 +240,31 @@
  <p style="font-size:14px;color:#505050;margin-top:8px;max-width:640px;">Comparing January–June 2025 with January–June 2026 across 1,848 matched counting stations. KFZ = all vehicle types; PKW = passenger cars; SV = Schwerverkehr (heavy traffic).</p>
  </div>
 
- <!-- Delta KPIs -->
+ <!-- Delta KPIs — pre-filled with last-known values; live fetch overwrites silently -->
  <div id="yoy-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:32px;">
- <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
- <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
- <div style="height:40px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:12px;"></div>
- <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ <div class="kpi-card">
+  <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:12px;letter-spacing:0.01em;">Total Vehicles (KFZ Dir.1)</div>
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+   <div class="kpi-value" style="font-size:36px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1;">-2.3%</div>
+   <span style="font-size:20px;color:#C0392B;font-weight:700;">↓</span>
+  </div>
+  <div style="font-size:12px;color:#505050;margin-top:8px;">2.88&thinsp;Bn. → 2.82&thinsp;Bn. vehicles H1</div>
  </div>
- <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
- <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
- <div style="height:40px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:12px;"></div>
- <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ <div class="kpi-card">
+  <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:12px;letter-spacing:0.01em;">Passenger Cars (PKW Dir.1)</div>
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+   <div class="kpi-value" style="font-size:36px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1;">-2.3%</div>
+   <span style="font-size:20px;color:#C0392B;font-weight:700;">↓</span>
+  </div>
+  <div style="font-size:12px;color:#505050;margin-top:8px;">1.26&thinsp;Bn. → 1.24&thinsp;Bn. PKW H1</div>
  </div>
- <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
- <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
- <div style="height:40px;background:#f0f0f0;border-radius:2px;width:50%;margin-bottom:12px;"></div>
- <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+ <div class="kpi-card">
+  <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:12px;letter-spacing:0.01em;">Heavy Traffic (SV Dir.1)</div>
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+   <div class="kpi-value" style="font-size:36px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1;">-5.1%</div>
+   <span style="font-size:20px;color:#C0392B;font-weight:700;">↓</span>
+  </div>
+  <div style="font-size:12px;color:#505050;margin-top:8px;">648.9&thinsp;Mn. → 615.9&thinsp;Mn. SV H1</div>
  </div>
  </div>
  <p style="font-size:11px;color:#888;margin:-16px 0 24px;line-height:1.5;">
@@ -429,12 +438,8 @@ const PURPLE_SHADES = [
 
 // ── Overview ──────────────────────────────────────────
 async function loadOverview() {
- const [r, rs] = await Promise.all([
-   fetch(`${API_BASE}/api/traffic/overview`),
-   fetch(`${API_BASE}/api/traffic/states`),
- ]);
- const d = await r.json();
- d.states = await rs.json();
+ const [d_base, states] = await Promise.all([_prefetch.overview, _prefetch.states]);
+ const d = { ...d_base, states };
  // API returns total_kfz; normalise to kfz_total for chart compatibility
  (d.top10_stations || []).forEach(s => { s.kfz_total = s.total_kfz; });
  (d.states || []).forEach(s => { s.kfz_total = s.total_kfz; });
@@ -753,7 +758,16 @@ loadOverview().catch(console.error);
 loadStations().catch(console.error);
 loadHourlyPattern('2026-06').catch(console.error);
 
-// ── YoY: lazy-load on scroll into view ────────────────
+// ── Pre-fetch slow endpoints in parallel at page load ─────────────────
+// Data is cached server-side for 1 hour. Starting fetches immediately means
+// results are ready (or nearly so) by the time the user scrolls to each section.
+const _prefetch = {
+  yoy:      fetch(`${API_BASE}/api/traffic/yoy`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+  overview: fetch(`${API_BASE}/api/traffic/overview`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+  states:   fetch(`${API_BASE}/api/traffic/states`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+};
+
+// ── YoY: render on scroll, but data is already in-flight ──────────────
 let _yoyLoaded = false;
 const _yoyObserver = new IntersectionObserver((entries) => {
   if (entries[0].isIntersecting && !_yoyLoaded) {
@@ -761,7 +775,7 @@ const _yoyObserver = new IntersectionObserver((entries) => {
     loadYoY().catch(console.error);
     _yoyObserver.disconnect();
   }
-}, { rootMargin: '100px' });
+}, { rootMargin: '200px' });
 _yoyObserver.observe(document.getElementById('yoy-section'));
 
 // ── MAP: lazy-load on scroll into view ────────────────
@@ -825,9 +839,7 @@ async function loadMap() {
 // ── Year-over-Year comparison ─────────────────────────
 async function loadYoY() {
  try {
- const resp = await fetch(`${API_BASE}/api/traffic/yoy`);
- if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
- const data = await resp.json();
+ const data = await _prefetch.yoy;
 
  const totals = data.totals || [];
  const t25 = totals.find(r => r.year === 2025) || {};

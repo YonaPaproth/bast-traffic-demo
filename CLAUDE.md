@@ -87,11 +87,12 @@ data: {"type":"done"}
 ## Data
 
 - **Source:** BASt open data, H1 2025 + H1 2026 (12 months total)
-- **Volume (2026):** ~3.58B vehicle records, 1,943 counting stations, 181 days
+- **Volume (H1 2025 + H1 2026):** 15,176,273 station-hour observations (rows); ~11.4B total vehicle passages (SUM kfz_total both directions, 12 months); ~5.57B passages for 2026 H1 alone. The earlier "3.58B" figure was stale — confirmed via PyArrow on the committed Iceberg snapshot 2026-09-19.
+- **Iceberg table (committed 2026-09-19):** 12 snapshots (2025-01–06, 2026-01–06), metadata at `s3://bast-traffic-demo-112220711619/iceberg/bast/traffic/`, manifest at `data/iceberg_manifest.json`. Snapshot ID must be handled as string in JavaScript (exceeds `Number.MAX_SAFE_INTEGER`).
 - **Format:** Parquet on S3, glob: `s3://bast-traffic-demo-112220711619/traffic/**/*.parquet`
 - **Columns (new schema, 2025 all months + 2026 months 02-06):** `station_id, station_name, state, road_class, road_number, lat, lon, date DATE, hour INTEGER (0-23), kfz_r1, kfz_r2, kfz_total INTEGER, sv_r1 INTEGER, pkw_r1 INTEGER`
 - **2026/month=01 on S3:** old schema (no sv_r1/pkw_r1) — API uses COALESCE to handle this
-- **Iceberg catalog:** SQLite (local only; not used on ECS — ECS queries Parquet directly via DuckDB httpfs)
+- **Iceberg catalog:** SQLite at `data/iceberg_s3_catalog.db` (local only — ECS still queries raw Parquet via DuckDB httpfs; ECS cutover to `iceberg_scan()` is the next planned commit)
 - **Raw ZIPs on S3:** `s3://bast-traffic-demo-112220711619/raw/` — 2026 Feb–Jun ZIPs only; Jan 2026 ZIP not uploaded
 - **2025 raw data:** locally in `data/raw/DZ_2025_0X_Rohdaten/` (months 01–06); not on S3
 

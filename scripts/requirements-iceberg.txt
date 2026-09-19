@@ -1,0 +1,9 @@
+# Dependencies for iceberg_ingest.py
+# Install with: pip install -r scripts/requirements-iceberg.txt
+#
+# Not included in the main requirements.txt — ECS does not run ingestion.
+# Pin exact versions for reproducible ingestion results.
+
+# pyiceberg 0.8.1: first version with Python 3.14 wheel + numpy 2.x support
+# Install with s3fs only; pyarrow >=14.0.0 must already be present (comes with main requirements.txt)
+pyiceberg[s3fs]==0.8.1

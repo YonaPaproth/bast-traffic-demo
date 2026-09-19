@@ -14,6 +14,7 @@ import json
 import boto3
 import duckdb
 from fastapi import FastAPI, HTTPException, Query
+from api.ontology import get_object as ontology_get_object
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
@@ -462,12 +463,27 @@ _PARQUET_EXPR = (
 
 _BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 
-_BEDROCK_SYSTEM = f"""You are a data analyst assistant for BASt (German Federal Highway Research Institute).
-Help users explore German highway traffic data covering H1 2025 (Jan–Jun 2025) AND H1 2026 (Jan–Jun 2026).
-~1,943 counting stations, ~7B vehicle records across both years, hourly granularity.
+_BEDROCK_SYSTEM = f"""You are a traffic operations analyst assistant for BASt (German Federal Highway Research Institute).
+Help users explore and act on German highway traffic data covering H1 2025 (Jan–Jun 2025) AND H1 2026 (Jan–Jun 2026).
+~1,943 counting stations, ~11B vehicle records across both years, hourly granularity.
 Context: traffic may differ between years due to geopolitical and economic developments in 2025–2026.
 
-DuckDB SQL data source — use this exact expression in FROM clauses:
+## Domain Objects
+You understand two business objects. Prefer get_object over raw SQL when the user asks about a specific entity:
+
+Station — a counting station on a highway.
+  id format: station_id string, e.g. "NW5048"
+  computed properties: avg_daily_kfz, sv_share_pct, congestion_percentile (0=quietest, 100=busiest),
+  maintenance_priority_score (0-10, SV share × congestion)
+
+Corridor — all stations on one road segment in one federal state, e.g. A1 in NW.
+  id format: "{{road_class}}{{road_number}}/{{state}}", e.g. "A1/NW", "B10/RP"
+  computed properties: num_stations, avg_daily_kfz, sv_share_pct, peak_hour, top_stations
+
+Use get_object first. Then use execute_sql for follow-up aggregate or YoY queries.
+
+## SQL data source
+Use this exact expression in FROM clauses:
   {_PARQUET_EXPR}
 
 Columns:
@@ -486,14 +502,43 @@ Columns:
   sv_r1 INTEGER           -- Schwerverkehr (heavy traffic: trucks + buses) direction 1 per hour
 
 Year-over-year queries: filter by YEAR(date) = 2025 or 2026, then compare.
-Always call execute_sql to fetch real data before answering.
 Add LIMIT 20 unless the user asks for more. Be concise and data-driven."""
 
 _BEDROCK_TOOLS = [
     {
         "toolSpec": {
+            "name": "get_object",
+            "description": (
+                "Retrieve a hydrated domain object — Station or Corridor — with computed properties "
+                "(avg_daily_kfz, congestion_percentile, sv_share_pct, maintenance_priority_score, peak_hour). "
+                "Use this before execute_sql when the user asks about a specific station or road segment."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "object_type": {
+                            "type": "string",
+                            "enum": ["station", "corridor"],
+                            "description": "The type of domain object to retrieve.",
+                        },
+                        "object_id": {
+                            "type": "string",
+                            "description": (
+                                "For station: the station_id, e.g. 'NW5048'. "
+                                "For corridor: '{road_class}{road_number}/{state}', e.g. 'A1/NW' or 'B10/RP'."
+                            ),
+                        },
+                    },
+                    "required": ["object_type", "object_id"],
+                }
+            },
+        }
+    },
+    {
+        "toolSpec": {
             "name": "execute_sql",
-            "description": "Run a DuckDB SQL query against the BASt traffic Parquet data. Returns up to 50 rows as JSON.",
+            "description": "Run a DuckDB SQL query against the BASt traffic data. Use for aggregate, YoY, or custom queries not covered by get_object. Returns up to 50 rows as JSON.",
             "inputSchema": {
                 "json": {
                     "type": "object",
@@ -507,7 +552,7 @@ _BEDROCK_TOOLS = [
                 }
             },
         }
-    }
+    },
 ]
 
 
@@ -592,7 +637,24 @@ def _ask_stream(question: str):
                 if "toolUse" not in block:
                     continue
                 tu = block["toolUse"]
-                if tu["name"] == "execute_sql":
+
+                if tu["name"] == "get_object":
+                    obj_type = tu["input"].get("object_type", "")
+                    obj_id   = tu["input"].get("object_id", "")
+                    yield f'data: {json.dumps({"type": "tool_running", "query": f"get_object({obj_type}, {obj_id})"})}\n\n'
+                    try:
+                        con = get_con()
+                        result = ontology_get_object(con, parquet_source(), obj_type, obj_id)
+                        con.close()
+                        result_text = json.dumps(result)
+                    except Exception as exc:
+                        result_text = json.dumps({"error": str(exc)})
+                    tool_results.append({
+                        "toolUseId": tu["toolUseId"],
+                        "content": [{"text": result_text}],
+                    })
+
+                elif tu["name"] == "execute_sql":
                     query = tu["input"].get("query", "")
                     yield f'data: {json.dumps({"type": "tool_running", "query": query[:300]})}\n\n'
                     try:
@@ -614,6 +676,30 @@ def _ask_stream(question: str):
         else:
             yield f'data: {json.dumps({"type": "done"})}\n\n'
             break
+
+
+# ── Ontology object endpoint ──────────────────────────────────────────────────
+
+@app.get("/api/objects/{object_type}/{object_id:path}")
+def get_ontology_object(object_type: str, object_id: str):
+    """Return a hydrated domain object (Station or Corridor).
+
+    Examples:
+      GET /api/objects/station/NW5048
+      GET /api/objects/corridor/A1/NW
+    """
+    con = get_con()
+    try:
+        result = ontology_get_object(con, parquet_source(), object_type, object_id)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        con.close()
 
 
 @app.get("/api/ask")

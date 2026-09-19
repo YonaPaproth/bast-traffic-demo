@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-install DuckDB httpfs extension so the container doesn't need internet at runtime
-RUN python -c "import duckdb; con = duckdb.connect(); con.execute('INSTALL httpfs'); con.close()"
+# Pre-install DuckDB extensions so the container doesn't need internet at runtime
+RUN python -c "import duckdb; con = duckdb.connect(); con.execute('INSTALL httpfs'); con.execute('INSTALL iceberg'); con.close()"
 
 COPY api/ ./api/
 

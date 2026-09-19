@@ -1,0 +1,23 @@
+{
+  "table": "bast.traffic",
+  "warehouse": "s3://bast-traffic-demo-112220711619/iceberg",
+  "metadata_location": "s3://bast-traffic-demo-112220711619/iceberg/bast/traffic/metadata/00012-12597a78-cd3f-485d-88fd-1babebf37da6.metadata.json",
+  "snapshot_id": "7174431960541360254",
+  "total_records": 15176273,
+  "ingested_months": [
+    "2025-01",
+    "2025-02",
+    "2025-03",
+    "2025-04",
+    "2025-05",
+    "2025-06",
+    "2026-01",
+    "2026-02",
+    "2026-03",
+    "2026-04",
+    "2026-05",
+    "2026-06"
+  ],
+  "last_updated": "2026-09-19T14:03:44.955592+00:00",
+  "note": "ECS should read iceberg_scan() with metadata_location, not a directory path. Snapshot files must be retained; do not expire snapshots referenced here."
+}

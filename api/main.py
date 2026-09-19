@@ -35,6 +35,15 @@ AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 # month-to-month; scanning all 6 months for DISTINCT metadata is too slow.
 _STATION_PARQUET = PARQUET_GLOB.replace("**/*.parquet", "year=2026/month=01/traffic.parquet")
 
+# Load Iceberg manifest (bundled as api/iceberg_manifest.json by the Docker build).
+# Used in S3 mode to pin the exact metadata_location for iceberg_scan().
+# Locally, manifest is absent and the raw Parquet glob is used instead.
+_ICEBERG_META_LOCATION = ""
+_manifest_path = Path(__file__).parent / "iceberg_manifest.json"
+if USE_S3 and _manifest_path.exists():
+    with open(_manifest_path) as _f:
+        _ICEBERG_META_LOCATION = json.load(_f).get("metadata_location", "")
+
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="BASt Traffic Demo API",
@@ -55,7 +64,8 @@ def get_con() -> duckdb.DuckDBPyConnection:
     """Return a DuckDB connection configured for local or S3 access."""
     con = duckdb.connect(database=":memory:")
     if USE_S3:
-        con.execute("INSTALL httpfs; LOAD httpfs")
+        con.execute("LOAD httpfs")
+        con.execute("LOAD iceberg")
         # On ECS Fargate the task role is picked up automatically via the
         # credential chain (ECS container metadata endpoint).
         try:
@@ -73,7 +83,9 @@ def get_con() -> duckdb.DuckDBPyConnection:
 
 
 def parquet_source() -> str:
-    """Return DuckDB read_parquet expression."""
+    """Return DuckDB table expression — iceberg_scan on ECS, read_parquet locally."""
+    if USE_S3 and _ICEBERG_META_LOCATION:
+        return f"iceberg_scan('{_ICEBERG_META_LOCATION}')"
     return f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false, union_by_name=true)"
 
 
@@ -430,7 +442,11 @@ def get_yoy_top_stations(limit: int = Query(20, description="Number of top mover
 
 # ── Bedrock chat ──────────────────────────────────────────────────────────────
 
-_PARQUET_EXPR = f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
+_PARQUET_EXPR = (
+    f"iceberg_scan('{_ICEBERG_META_LOCATION}')"
+    if USE_S3 and _ICEBERG_META_LOCATION
+    else f"read_parquet('{PARQUET_GLOB}', hive_partitioning=false)"
+)
 
 _BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 

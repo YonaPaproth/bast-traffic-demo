@@ -22,13 +22,9 @@ jobs:
 
       - name: Deploy HTML (no-cache)
         run: |
-          aws s3 cp frontend/index.html \
-            s3://bast-traffic-demo-112220711619/index.html \
-            --content-type "text/html" \
-            --cache-control "no-cache, no-store, must-revalidate"
-
-          aws s3 cp frontend/architecture.html \
-            s3://bast-traffic-demo-112220711619/architecture.html \
+          aws s3 sync frontend/ s3://bast-traffic-demo-112220711619/ \
+            --exclude "*" \
+            --include "*.html" \
             --content-type "text/html" \
             --cache-control "no-cache, no-store, must-revalidate"
 

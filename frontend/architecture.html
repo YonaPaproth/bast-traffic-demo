@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Simple architecture for agent-first systems</title>
+<title>Production architecture for agent-first systems</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -157,17 +157,17 @@
 <div style="background:#fff;padding:64px 0 48px;">
   <div class="page">
     <div class="divider-purple"></div>
-    <h1 style="max-width:860px;">Simple architecture for<br>agent-first systems</h1>
+    <h1 style="max-width:860px;">Production architecture for<br>agent-first systems</h1>
     <div style="margin-top:20px;display:inline-block;padding:18px 24px;background:#111;border-radius:6px;">
       <div style="font-size:17px;font-weight:700;color:#fff;line-height:1.5;letter-spacing:-0.01em;">
-        Simplify the data platform.&ensp;<span style="color:var(--accent);">Put agents to work.</span>&ensp;Keep decisions accountable.
+        Simplify the data platform.&ensp;<span style="color:#d49aff;">Put agents to work.</span>&ensp;Keep decisions accountable.
       </div>
     </div>
     <p class="lead" style="margin-top:24px;">
-      This page describes the reference architecture for simple agent-first systems. The BASt traffic investigation serves as a reference implementation that demonstrates the foundation.
+      Option A is a scalable production reference architecture built around open data formats, explicit business semantics, and controlled agent tools. The BASt application demonstrates a small implementation of the same pattern; production readiness requires workload-specific validation.
     </p>
     <p class="lead">
-      <a href="management.html" style="color:var(--accent);font-weight:600;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">See the  briefing</a> for business case and the five questions every deployment should answer.
+      <a href="management.html" style="color:var(--accent);font-weight:600;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">See the management briefing</a> for the business case, adoption approach, and measures of success.
     </p>
   </div>
 </div>
@@ -176,9 +176,9 @@
 <div class="section-alt">
   <div class="section page">
     <div class="divider-purple"></div>
-    <div class="section-label">Simple reference architecture</div>
-    <h2>Seven responsibilities and technology choices made to follow the workload.</h2>
-    <p class="lead">Each responsibility can be satisfied by more than one technology. The design choices below describe what each layer must do, concrete options follow in the next section.</p>
+    <div class="section-label">Production reference architecture</div>
+    <h2>Seven responsibilities. Technology selected for the workload.</h2>
+    <p class="lead">These responsibilities apply across domains and deployment sizes. The reference design defines what must be built and verified; the technology choices show one AWS implementation.</p>
 
     <div class="resp-wrap">
       <table class="resp-table">
@@ -195,7 +195,7 @@
           </tr>
           <tr>
             <td>Query execution</td>
-            <td>Embedded or distributed engines selected for the workload  (single-node for small isolated queries, distributed for concurrent analytical loads). Isolation between tenants or workloads. Latency targets set per query class.</td>
+            <td>Embedded or distributed engines selected through workload benchmarks. Isolate tenants and workloads; set latency, memory, concurrency, and query-cost limits. Single-node execution can remain a production choice when it meets those requirements.</td>
           </tr>
           <tr>
             <td>Business semantics</td>
@@ -207,7 +207,7 @@
           </tr>
           <tr>
             <td>Actions</td>
-            <td>Durable transactional storage for pending and completed actions. Idempotent execution: the same approved action can be safely replayed. Approval rules and role-based authorisation. Audit history with approver identity and evidence snapshot. Controlled integrations with operational systems.</td>
+            <td>Immutable proposals linked to server-retained evidence, with approval rules and verified reviewer identity. Record status transitions atomically. For operational execution, use durable dispatch, downstream deduplication, and reconciliation after uncertain outcomes. Keep approval state separate from execution state.</td>
           </tr>
           <tr>
             <td>Security and operations</td>
@@ -244,7 +244,7 @@
       <div class="tech-card">
         <div class="tech-card-resp">Data foundation</div>
         <div class="tech-card-label">S3 + Apache Iceberg v2</div>
-        <div class="tech-card-desc">Object storage with ACID semantics, time travel, schema evolution, and partition evolution. The table format is portable and the same files work with DuckDB, Trino, Athena, and Spark.</div>
+        <div class="tech-card-desc">Iceberg adds table metadata, snapshots, and transactional commits over files on S3. Use a shared catalog for coordinated access and commits. Retain referenced metadata and data files for replay; validate engine compatibility with the table features in use.</div>
         <span class="tech-pill">Apache Iceberg v2</span>
         <span class="tech-pill">AWS S3</span>
         <span class="tech-pill tech-pill-gray">Nessie or Glue catalog</span>
@@ -252,17 +252,17 @@
 
       <div class="tech-card">
         <div class="tech-card-resp">Query execution</div>
-        <div class="tech-card-label">DuckDB → Trino → Athena</div>
-        <div class="tech-card-desc">DuckDB for single-node workloads and fast local development. Trino on ECS for concurrent analytical queries at production load. Athena for serverless pay-per-query. The upgrade path is the same Iceberg files, no data migration.</div>
-        <span class="tech-pill">DuckDB (PoC / isolated)</span>
-        <span class="tech-pill tech-pill-gray">Trino (production)</span>
+        <div class="tech-card-label">DuckDB, Trino, or Athena</div>
+        <div class="tech-card-desc">DuckDB for embedded and isolated analytical workloads; Trino for distributed execution; Athena for managed query execution. Select against latency, concurrency, memory, and cost targets. Shared Iceberg tables reduce data movement, but SQL and feature compatibility still need testing.</div>
+        <span class="tech-pill">DuckDB (embedded)</span>
+        <span class="tech-pill tech-pill-gray">Trino (distributed)</span>
         <span class="tech-pill tech-pill-gray">Athena (serverless)</span>
       </div>
 
       <div class="tech-card">
         <div class="tech-card-resp">Business semantics</div>
         <div class="tech-card-label">Versioned entity module</div>
-        <div class="tech-card-desc">A Python module — checked in, versioned, and tested — that defines the entities the agent works with (Station, Corridor, Period), the metrics available, and the tool contracts. Decoupled from the LLM; testable independently.</div>
+        <div class="tech-card-desc">Versioned code defines domain entities such as Asset, Shipment, or Station, their relationships, metric definitions, and tool contracts. Include units, coverage, limitations, and data provenance. Test semantics independently of the model.</div>
         <span class="tech-pill">Python module</span>
         <span class="tech-pill tech-pill-gray">Tool contract registry</span>
       </div>
@@ -270,7 +270,7 @@
       <div class="tech-card">
         <div class="tech-card-resp">Agent execution</div>
         <div class="tech-card-label">Claude via Bedrock Converse API</div>
-        <div class="tech-card-desc">Agentic tool-use loop with bounded tool access. Stream results back token-by-token. In production: durable run state via PostgreSQL, retry on transient failures, evaluation suite for regression testing of query accuracy.</div>
+        <div class="tech-card-desc">A tool-use loop invokes approved analytical capabilities. Persist investigation state, tool results, and evidence in PostgreSQL; add cancellation, retry budgets, and model/tool version records. Evaluate answer quality, evidence use, and tool selection. Stream progress to the user.</div>
         <span class="tech-pill">Claude + Bedrock</span>
         <span class="tech-pill tech-pill-gray">FastAPI</span>
         <span class="tech-pill tech-pill-gray">PostgreSQL (durable state)</span>
@@ -279,7 +279,7 @@
       <div class="tech-card">
         <div class="tech-card-resp">Actions</div>
         <div class="tech-card-label">PostgreSQL + event workers</div>
-        <div class="tech-card-desc">PostgreSQL as the durable action store — pending, approved, executed, and rejected states. Event-driven workers execute approved actions against operational integrations. Idempotency key per action prevents double-execution on retry.</div>
+        <div class="tech-card-desc">RDS PostgreSQL stores immutable proposals, evidence references, and append-only transition history. A transactional outbox dispatches approved work to workers. Propagate idempotency keys to integrations that support them; reconcile timeouts before retrying uncertain external effects.</div>
         <span class="tech-pill tech-pill-gray">PostgreSQL</span>
         <span class="tech-pill tech-pill-gray">Event-driven workers</span>
         <span class="tech-pill tech-pill-gray">Idempotency keys</span>
@@ -288,7 +288,7 @@
       <div class="tech-card">
         <div class="tech-card-resp">Security and operations</div>
         <div class="tech-card-label">IAM + Lake Formation + CloudWatch</div>
-        <div class="tech-card-desc">IAM roles for service identity. Lake Formation for column- and row-level data access controls on the Iceberg catalog. CloudWatch for structured logs and investigation-level cost metrics. GitHub Actions or ADO for tested, repeatable deployments.</div>
+        <div class="tech-card-desc">Use authenticated user identity and scoped service roles. With Glue and a supported query integration, configure Lake Formation filters and restrict direct S3 access that could bypass them. Other catalog/engine combinations require their own enforcement design. Instrument tool calls, approvals, costs, and failures in the application.</div>
         <span class="tech-pill tech-pill-gray">IAM + Lake Formation</span>
         <span class="tech-pill tech-pill-gray">CloudWatch</span>
         <span class="tech-pill tech-pill-gray">GitHub Actions CI/CD</span>
@@ -297,7 +297,7 @@
     </div>
 
     <div style="margin-top:20px;padding:16px 20px;background:#f7f7f9;border-radius:6px;font-size:13px;color:#505050;line-height:1.65;">
-      <strong style="color:#111;">Composability over completeness.</strong> A logistics use case investigating delivery delays does not need streaming ingestion or a multi-tenant query cluster. A manufacturing use case monitoring production lines across 50 plants does. Match the components to the workload and expand deliberately.
+      <strong style="color:#111;">Composability over completeness.</strong> A delivery investigation may work with hourly batches; a production-line response may require fresh events. Freshness, concurrency, isolation, and recovery targets determine the components. Industry or dataset size alone does not determine the stack.
     </div>
   </div>
 </div>
@@ -306,12 +306,12 @@
 <div class="section-alt">
   <div class="section page">
     <div class="divider-purple"></div>
-    <div class="section-label">Option A · Full open-source production stack</div>
-    <h2>Production pipeline — ingestion through agent</h2>
-    <p class="lead">End-to-end open-source production architecture from CDC ingestion to AI-powered investigation. Less than 10% slower than Databricks on typical analytics workloads — at a fraction of the licensing cost.</p>
+    <div class="section-label">Option A · Scalable production reference</div>
+    <h2>Open formats, scalable services, accountable actions</h2>
+    <p class="lead">An AWS reference combining open-source components with managed services and a hosted model. Batch ingestion is a valid production path; add CDC or streaming only when freshness requirements justify it. Capacity, availability, recovery, and operating cost must be validated for the chosen deployment.</p>
 
     <div style="margin-top:20px;margin-bottom:6px;">
-      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#505050;">① Ingestion &amp; streaming</span>
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#505050;">① Ingestion &amp; validated publication</span>
     </div>
     <div class="arch-flow">
       <div class="arch-step">
@@ -319,25 +319,25 @@
           <span class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
           <div class="label">Source systems</div>
           <div class="sub">ERP, SAP, sensors,<br>or any structured source</div>
-          <span class="tech">SAP BTP / SLT</span>
+          <span class="tech">Files / APIs / databases</span>
         </div>
       </div>
       <div class="arch-arrow">→</div>
       <div class="arch-step highlight">
         <div class="arch-box">
           <span class="icon"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/></svg></span>
-          <div class="label">CDC layer</div>
-          <div class="sub">AWS DMS (databases)<br>or Debezium → Kafka</div>
-          <span class="tech">DMS / Debezium</span>
+          <div class="label">Ingestion</div>
+          <div class="sub">Batch files or API loads<br>Optional CDC for<br>freshness requirements</div>
+          <span class="tech">Batch / DMS / Debezium</span>
         </div>
       </div>
       <div class="arch-arrow">→</div>
       <div class="arch-step highlight">
         <div class="arch-box">
           <span class="icon"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-          <div class="label">Stream processing</div>
-          <div class="sub">Flink (sub-second)<br>or Glue Streaming<br>(managed)</div>
-          <span class="tech">Flink / Glue</span>
+          <div class="label">Validate &amp; publish</div>
+          <div class="sub">Schema and quality checks<br>Commit a table snapshot<br>Emit a publication event</div>
+          <span class="tech">Batch job / stream processor</span>
         </div>
       </div>
     </div>
@@ -368,8 +368,8 @@
         <div class="arch-box">
           <span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
           <div class="label">Query engine</div>
-          <div class="sub">Trino on ECS Fargate<br>(distributed) or<br>Athena (serverless)</div>
-          <span class="tech">Trino + Athena</span>
+          <div class="sub">Choose embedded,<br>distributed, or managed<br>query execution</div>
+          <span class="tech">DuckDB / Trino / Athena</span>
         </div>
       </div>
       <div class="arch-arrow">→</div>
@@ -396,22 +396,23 @@
       <div class="layers">
         <div class="layer layer-bronze">
           <div class="layer-label">Iceberg v2</div>
-          <div class="layer-desc"><strong>ACID transactions · schema evolution · time travel · partition evolution · compaction.</strong> The same Parquet files are queryable by DuckDB, Trino, Athena, and Spark without transformation. The PoC and production system share the same storage format.</div>
+          <div class="layer-desc"><strong>Versioned tables with explicit publication.</strong> A catalog resolves a table to metadata; snapshots reference manifests and data files. Retain the selected snapshot, SQL, results, and metric version with investigation evidence. Ingestion emits the publication event explicitly; an Iceberg commit alone does not trigger an investigation.</div>
         </div>
         <div class="layer layer-silver">
           <div class="layer-label">Nessie</div>
-          <div class="layer-desc"><strong>Git-like data branching:</strong> dev → staging → prod. Commit, merge, and rollback data changes like code. REST API. Self-hostable on ECS or as Dremio Arctic managed service. Schema validation on branch merge prevents bad data reaching production.</div>
+          <div class="layer-desc"><strong>Optional versioned catalog.</strong> Nessie provides catalog branching and merge workflows when teams need them. Pipeline checks and review rules must validate schemas and data quality before promotion. A merge is not itself a data-quality guarantee; use Glue when that better fits the access and operations model.</div>
         </div>
         <div class="layer layer-gold">
           <div class="layer-label">Trino</div>
-          <div class="layer-desc"><strong>Distributed SQL at petabyte scale.</strong> Less than 10% performance gap versus Databricks on typical analytics queries. Runs on ECS Fargate — pay for what you use, scale horizontally. Separates storage (S3 + Iceberg) from compute cleanly.</div>
+          <div class="layer-desc"><strong>Distributed query execution when required.</strong> Size coordinators and workers for the tested workload; define admission controls, memory limits, and capacity management. Benchmark representative queries and concurrency. Choose an execution environment that supports the required memory, temporary storage, and recovery behavior.</div>
         </div>
         <div class="layer layer-platinum">
           <div class="layer-label">Governance</div>
-          <div class="layer-desc"><strong>Column- and row-level security via AWS Lake Formation.</strong> Amazon DataZone for business catalog and data discovery. Schema evolution without rewriting data. Audit trail via CloudTrail and CloudWatch for every query, every approval, every agent run.</div>
+          <div class="layer-desc"><strong>Enforcement follows the access path.</strong> Configure and test catalog, query-engine, and S3 permissions together. Application events capture investigation, evidence, and approval identities; configured AWS audit logs complement them. Exercise access-denial, restore, and failure scenarios before production release.</div>
         </div>
       </div>
     </div>
+<div style="margin-top:24px;padding:20px 24px;background:#fff;border:1px solid #e0e0e0;border-radius:6px;"><h3 style="font-size:16px;margin-bottom:8px;">Production acceptance</h3><p style="font-size:13px;color:#505050;line-height:1.6;">Before launch, name the service owner and approve workload-specific latency, concurrency, availability, and recovery targets. Demonstrate access enforcement, query isolation, evidence retention, restore and rollback, and external-action retry behavior. Record benchmark results and runbooks against the deployed release.</p></div>
   </div>
 </div>
 
@@ -421,7 +422,7 @@
     <div class="divider-purple"></div>
     <div class="section-label">Reference implementation</div>
     <h2>Demo: BASt traffic investigation</h2>
-    <p class="lead">The demo implements the same data contracts, tool contracts, and interaction model the production architecture requires.</p>
+    <p class="lead">The repository implements the data, object, and proposal foundations of the production pattern. The table below reports source capabilities, not a claim that every path has passed live acceptance or production testing.</p>
 
     <!-- You are here callout -->
     <div style="margin-top:20px;padding:16px 20px;background:var(--accent-light);border:2px solid var(--accent);border-radius:6px;display:flex;align-items:flex-start;gap:12px;">
@@ -430,7 +431,7 @@
       </div>
       <div>
         <div style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:4px;">This is the reference implementation.</div>
-        <div style="font-size:13px;color:#333;line-height:1.6;">1,943 counting stations · 12 months of vehicle records · 15 billion passages · Apache Iceberg v2 on S3 · Claude via Bedrock · FastAPI on ECS Fargate · ~€50/month. The purple chat button runs the agent live.</div>
+        <div style="font-size:13px;color:#333;line-height:1.6;">Published manifest: 15,176,273 station-hour observations across Jan–Jun 2025 and Jan–Jun 2026. Iceberg on S3, DuckDB, FastAPI on ECS Fargate, and Claude via Bedrock. Observation rows are distinct from summed vehicle counts; no independently measured cost or throughput benchmark is claimed here.</div>
       </div>
     </div>
 
@@ -447,56 +448,56 @@
           <tr>
             <td>Data foundation</td>
             <td>
-              Parquet on S3 in Apache Iceberg v2 format. PyIceberg catalog with committed snapshots (12 months). Time travel to any snapshot.<br>
-              <span class="label-implemented">Implemented</span>
+              Parquet data files committed to an Iceberg table on S3. A bundled manifest pins the metadata location and records the snapshot ID. Replaying older snapshots requires retaining their metadata and data files.<br>
+              <span class="label-implemented">Implemented in source</span>
             </td>
             <td style="color:#505050;">Shared catalog service (Nessie or Glue) with publication controls, access governance, retention policies, and data contracts. Validated ingestion pipelines with schema enforcement on arrival.</td>
           </tr>
           <tr>
             <td>Query execution</td>
             <td>
-              DuckDB httpfs inside a single FastAPI service. Queries S3 Parquet directly — no cluster, no ETL. Good for up to ~100 GB concurrent load.<br>
-              <span class="label-implemented">Implemented</span>
+              DuckDB inside FastAPI uses iceberg_scan() against the published metadata reference in ECS mode. Capacity depends on queries, memory, temporary storage, and concurrency; no fixed dataset-size ceiling is asserted.<br>
+              <span class="label-implemented">Implemented in source</span>
             </td>
-            <td style="color:#505050;">Trino on ECS for concurrent analytical load across multiple tenants. Athena for ad-hoc serverless queries. Compute isolated from storage — scale horizontally without moving data.</td>
+            <td style="color:#505050;">Retain embedded execution where it meets requirements; isolate workers or select Trino/Athena when benchmarks justify it. Test engine compatibility, admission controls, and tenant isolation against the same data contracts.</td>
           </tr>
           <tr>
             <td>Business semantics</td>
             <td>
-              System prompt with table schema, column descriptions, and SQL tool contract. Agent understands station_id, kfz_total, sv_r1, and date ranges.<br>
-              <span class="label-implemented">Implemented</span>
+              Station and Corridor objects through get_object(), with metric notes, coverage caveats, reporting period, direction, snapshot ID, and metric version. execute_sql remains available for additional analyses.<br>
+              <span class="label-implemented">Implemented in source</span>
             </td>
             <td style="color:#505050;">Versioned entity module with entity definitions, relationship schemas, metric registry, and tool contracts checked in and tested independently. Evaluation suite for regression testing semantic accuracy.</td>
           </tr>
           <tr>
             <td>Agent execution</td>
             <td>
-              Single-turn investigation loop via Bedrock Converse API. Streams results via SSE. No retry, no durable state between requests.<br>
-              <span class="label-next">Next to validate</span>
+              Request-scoped tool-use loop via Bedrock Converse API with SSE progress. Object retrieval, SQL analysis, and proposal creation are wired in source. Durable investigation resume and production evaluations remain to be built.<br>
+              <span class="label-implemented">Implemented in source</span>
             </td>
             <td style="color:#505050;">Durable investigation state in PostgreSQL. Retry on transient failure. Cancellation support. Resource budget per investigation class. Evaluation harness with a test suite of known-answer questions.</td>
           </tr>
           <tr>
             <td>Actions</td>
             <td>
-              Agent produces text recommendations. No action store, no approval workflow, no integration with operational systems.<br>
-              <span class="label-next">Next to validate</span>
+              SQLite evidence and action stores; server-issued evidence IDs, payload-aware idempotency, and atomic pending → approved/rejected transitions with append-only history. Storage is ephemeral on ECS. Reviewer names are caller attribution, not verified identity. No operational write-back.<br>
+              <span class="label-implemented">Implemented in source</span>
             </td>
-            <td style="color:#505050;">Durable action store (PostgreSQL). Idempotent execution with idempotency keys. Approval rules and role-based authorisation. Audit history with approver identity and evidence snapshot. Event-driven workers for operational integrations.</td>
+            <td style="color:#505050;">RDS PostgreSQL, authenticated reviewers, scoped evidence access, backups, and retention. Add durable dispatch, downstream deduplication, reconciliation, and a separate execution lifecycle before operational write-back.</td>
           </tr>
           <tr>
             <td>Security and operations</td>
             <td>
-              IAM task role with S3 read and Bedrock invoke. CloudFront HTTPS. GitHub Actions CI/CD. No column-level controls, no investigation-level cost tracking.<br>
+              IAM task role, CloudFront HTTPS, and GitHub Actions deployment. End-user authentication, enforced SQL isolation/resource limits, fine-grained data access, and investigation-level cost tracking remain production requirements.<br>
               <span class="label-prod">Production requirement</span>
             </td>
-            <td style="color:#505050;">Lake Formation column- and row-level controls. Structured investigation logs with cost metrics. Distributed traces. Tested recovery procedures. Load-tested capacity with defined availability targets.</td>
+            <td style="color:#505050;">An enforced and tested identity/access path for the selected engine and catalog. Instrument application events and cost; define availability and recovery targets, then validate load, restore, and rollback procedures.</td>
           </tr>
           <tr>
             <td>User experience</td>
             <td>
-              Chat panel in the browser. Streams text and shows SQL queries inline. Evidence visible in the conversation.<br>
-              <span class="label-implemented">Implemented</span>
+              Chat interface with streamed progress and visible tool calls. Structured object and action endpoints support richer evidence and review views; verify the deployed UI against the chosen workflow.<br>
+              <span class="label-implemented">Implemented in source</span>
             </td>
             <td style="color:#505050;">Review queues for pending approvals. Action status tracking. Notification on investigation completion. Same interaction model — question → investigation → evidence → approved action — regardless of scale.</td>
           </tr>
@@ -505,92 +506,38 @@
     </div>
 
     <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#505050;"><span class="label-implemented">Implemented</span> Running in the live demo today</div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#505050;"><span class="label-next">Next to validate</span> Designed; not yet built</div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#505050;"><span class="label-prod">Production requirement</span> Required before production load; not a demo concern</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#505050;"><span class="label-implemented">Implemented in source</span> Present in the repository; verify deployed behavior separately</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#505050;"><span class="label-next">Deployment acceptance</span> Verify object retrieval, tool selection, evidence binding, and approval conflicts on the deployed revision</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#505050;"><span class="label-prod">Production requirement</span> Must be implemented and tested before production use</div>
     </div>
   </div>
 </div>
 
-<!-- ── Architecture comparison ───────────────────────────── -->
+<!-- Architecture evaluation -->
 <div class="section-alt">
   <div class="section page">
     <div class="divider-purple"></div>
-    <div class="section-label">Architectures compared</div>
-    <h2>Option A versus proprietary alternatives</h2>
-    <p class="lead">The open-source production stack (Option A) delivers equivalent analytical capability at a fraction of the licensing cost. The performance gap is less than 10%. The licensing gap is 15×.</p>
-
-    <div style="padding:20px 24px;background:#0d1117;border-radius:6px;margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;">Option A is about paying for the right thing.</div>
-      <div style="font-size:12px;color:#8b949e;line-height:1.6;">Databricks and Microsoft Fabric concentrate spend in platform licenses. The open-source path shifts that spend into delivery, domain knowledge, agent tooling, and embedded capability: pay for business outcomes, not infrastructure overhead.</div>
-    </div>
-
+    <div class="section-label">Architecture evaluation</div>
+    <h2>Compare the same workload and operating requirements</h2>
+    <p class="lead">Evaluate Option A alongside an existing Databricks, Microsoft Fabric, or other platform deployment. Reuse existing capabilities where they meet the requirements. The decision includes integration, operations, skills, and migration cost.</p>
     <div class="compare-wrap">
       <table class="compare-table">
-        <thead>
-          <tr>
-            <th></th>
-            <th style="background:#e5f5ee;color:#007040;">A · Open source production<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">Trino + Nessie + Athena + Claude</span><br><span style="font-size:10px;background:#007040;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;">RECOMMENDED</span></th>
-            <th>B · Databricks<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">Delta Lake + Unity Catalog + Power BI</span></th>
-            <th>C · Microsoft Fabric<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">OneLake + Fabric Lakehouse + Power BI</span></th>
-            <th class="accent">Reference impl. · BASt<br><span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;">S3 + Iceberg + DuckDB + Bedrock</span><br><span style="font-size:10px;background:var(--accent);color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;">THIS DEMO</span></th>
-          </tr>
-        </thead>
+        <thead><tr><th>Decision</th><th class="accent">Option A</th><th>Existing platform</th><th>Acceptance evidence</th></tr></thead>
         <tbody>
-          <tr>
-            <td>Monthly infrastructure</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>~€200–400 (pay-per-query)</td>
-            <td class="compare-val warn"><span class="pip pip-yellow"></span>€800–5,000+ (DBU costs)</td>
-            <td class="compare-val warn"><span class="pip pip-yellow"></span>Fabric F64: ~€5,000/month</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>~€50/month (Fargate + ALB + S3 + Bedrock)</td>
-          </tr>
-          <tr>
-            <td>Scalability</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Petabyte (Trino + Flink + Athena)</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Petabyte-capable (Spark)</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Petabyte via OneLake</td>
-            <td class="compare-val warn"><span class="pip pip-yellow"></span>~100 GB (single-node DuckDB)</td>
-          </tr>
-          <tr>
-            <td>Performance vs. Databricks</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>&lt;10% gap on analytics queries</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Reference</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Comparable</td>
-            <td class="compare-val bad"><span class="pip pip-red"></span>Single-node; limited concurrency</td>
-          </tr>
-          <tr>
-            <td>Data governance</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Lake Formation + Nessie + DataZone</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Unity Catalog (lineage, ACL)</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Purview integration</td>
-            <td class="compare-val warn"><span class="pip pip-yellow"></span>SQLite catalog; no column-level controls</td>
-          </tr>
-          <tr>
-            <td>Agent / NL query</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Claude via Bedrock; tool contracts; durable investigations</td>
-            <td class="compare-val warn"><span class="pip pip-yellow"></span>Genie (NL-to-SQL); limited tool use</td>
-            <td class="compare-val warn"><span class="pip pip-yellow"></span>Copilot integration; limited investigation model</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Claude via Bedrock; live streaming SSE; working now</td>
-          </tr>
-          <tr>
-            <td>Time travel</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Iceberg v2 + Nessie branches</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Delta Lake time travel</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Delta via OneLake</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Iceberg snapshots (12 committed)</td>
-          </tr>
-          <tr>
-            <td>Streaming</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Flink (sub-second) or Glue Streaming</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Spark Streaming / Kafka</td>
-            <td class="compare-val good"><span class="pip pip-green"></span>Fabric Eventstream</td>
-            <td class="compare-val bad"><span class="pip pip-red"></span>Batch only</td>
-          </tr>
+          <tr><td>Query execution</td><td>Choose embedded, distributed, or managed execution.</td><td>Evaluate available compute against the same queries.</td><td>Latency percentiles, concurrency, resource limits, and cost per workload.</td></tr>
+          <tr><td>Governance</td><td>Integrate and test the selected identity, catalog, engine, and storage controls.</td><td>Test configured controls and every agent access path.</td><td>Access-denial tests, identity propagation, audit completeness, and evidence retention.</td></tr>
+          <tr><td>Agent workflows</td><td>Own the semantic tools, evidence model, and action contracts.</td><td>Assess native capabilities and extensions against the same workflow.</td><td>Known-answer cases, tool-selection accuracy, reviewer effort, and recovery from failures.</td></tr>
+          <tr><td>Operating model</td><td>Own component integration, capacity, upgrades, and incident response.</td><td>Assess managed capabilities, contractual support, and remaining integration work.</td><td>Named service owner, tested availability, restore and rollback procedures.</td></tr>
+          <tr><td>Total cost</td><td>Include compute, storage, networking, inference, engineering, review, and support.</td><td>Include the same cost categories plus relevant licenses and migration costs.</td><td>Cost per accepted investigation and monthly total at the same service level.</td></tr>
         </tbody>
       </table>
     </div>
-
-    <p style="font-size:12px;color:#909090;margin-top:12px;">Infrastructure cost comparison only. Delivery fees apply in all cases. The argument is not zero cost — it is shifting spend from platform licenses to domain knowledge, agent tooling, and measurable outcomes.</p>
+    <p class="lead">No universal cost saving or performance gap is assumed. Publish dated benchmark results and billing assumptions when comparable measurements are available.</p>
+    <p style="font-size:12px;color:#505050;margin-top:16px;line-height:1.6;">Implementation references:
+      <a href="https://duckdb.org/docs/current/operations_manual/limits">DuckDB limits</a> ·
+      <a href="https://docs.aws.amazon.com/lake-formation/latest/dg/how-it-works.html">Lake Formation enforcement</a> ·
+      <a href="https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/">Idempotent API design</a>.
+    </p>
   </div>
 </div>
 
@@ -598,7 +545,7 @@
 <div style="background:#0d1117;padding:32px 0;">
   <div class="page" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
     <div>
-      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">The architectural continuity comes from shared contracts — not from keeping the same deployment size.</div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Shared contracts connect the reference implementation to production.</div>
       <div style="font-size:13px;color:#8b949e;line-height:1.5;">Data contracts · business semantics · tool contracts · evidence model · action model — these persist from demo to production.</div>
     </div>
     <div style="display:flex;gap:16px;flex-shrink:0;">

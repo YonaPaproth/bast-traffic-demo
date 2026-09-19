@@ -84,13 +84,16 @@
   .metrics-table td:first-child { font-weight: 600; color: #111; min-width: 180px; }
   .metrics-table tr:last-child td { border-bottom: none; }
 
-  /* Footer */
+  .evidence-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+
+/* Footer */
   footer { border-top: 1px solid #e0e0e0; padding: 28px 0 24px; font-size: 12px; color: #909090; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 
   @media (max-width: 900px) {
     .industry-grid { grid-template-columns: repeat(2, 1fr); }
     .num-grid { grid-template-columns: 1fr 1fr; }
     .control-grid { grid-template-columns: 1fr; }
+ .evidence-grid { grid-template-columns: 1fr; }
     h1 { font-size: 30px; }
     h2 { font-size: 22px; }
   }
@@ -135,7 +138,7 @@
     <!-- Thesis -->
     <div style="margin-top:20px;display:inline-block;padding:18px 24px;background:#111;border-radius:6px;">
       <div style="font-size:17px;font-weight:700;color:#fff;line-height:1.5;letter-spacing:-0.01em;">
-        Simplify the data platform.&ensp;<span style="color:var(--accent);">Put agents to work.</span>&ensp;Keep decisions accountable.
+        Simplify the data platform.&ensp;<span style="color:#d49aff;">Put agents to work.</span>&ensp;Keep decisions accountable.
       </div>
     </div>
 
@@ -188,28 +191,28 @@
       </div>
 
       <div class="ba-col ba-col-after">
-        <div class="ba-label" style="color:var(--accent);">With agents — delegated investigation</div>
+        <div class="ba-label" style="color:var(--accent);">Target operating model — delegated investigation</div>
         <div class="ba-step">
           <div class="ba-num" style="background:var(--accent);color:#fff;">1</div>
           <div class="ba-text">A question is asked in natural language. The agent opens a bounded investigation: it retrieves evidence from connected, governed data sources.</div>
         </div>
         <div class="ba-step">
           <div class="ba-num" style="background:var(--accent);color:#fff;">2</div>
-          <div class="ba-text">The agent tests candidate explanations, runs supporting queries, and assembles the evidence with the reasoning made visible.</div>
+          <div class="ba-text">The agent tests candidate explanations, runs supporting queries, and assembles the evidence with a concise rationale, assumptions, and unresolved questions.</div>
         </div>
         <div class="ba-step">
           <div class="ba-num" style="background:var(--accent);color:#fff;">3</div>
-          <div class="ba-text">A prepared recommendation is returned with the evidence attached. The reviewer reads the case and decides. The answer is available while the issue is live.</div>
+          <div class="ba-text">A prepared recommendation is returned with evidence and limitations attached. The reviewer checks the case and decides. Response-time targets are set to match the decision window.</div>
         </div>
         <div class="ba-step">
           <div class="ba-num" style="background:var(--accent);color:#fff;">4</div>
-          <div class="ba-text">The investigation is retained: the queries, the results, the decision, the approver. Every similar future question has a precedent to build on.</div>
+          <div class="ba-text">The investigation is retained: queries, results, data versions, decisions, and approver identity. Future investigations can consult this history while checking whether its evidence is still relevant.</div>
         </div>
       </div>
     </div>
 
     <div style="margin-top:16px;padding:16px 20px;background:#fff;border-radius:6px;border-left:4px solid var(--accent);font-size:13px;color:#505050;line-height:1.6;">
-      <strong style="color:#111;">The human role shifts, it does not disappear.</strong> Agents remove the mechanical work — pulling data, reconciling sources, drafting first versions. People focus on judgment, approval, and the decisions that carry accountability.
+      <strong style="color:#111;">The human role shifts, it does not disappear.</strong> Agents can reduce the mechanical work of pulling data, comparing sources, and drafting first versions. People focus on judgment, approval, and the decisions that carry accountability.
     </div>
   </div>
 </div>
@@ -219,7 +222,7 @@
   <div class="page">
     <div class="divider-purple"></div>
     <div class="section-label">Where it applies</div>
-    <h2>Any domain where questions routinely cross data boundaries</h2>
+    <h2>Recurring investigations across data sources</h2>
     <p class="lead">The pattern is the same across industries: a question, a bounded investigation, evidence, a prepared recommendation. The domain determines the data sources and the tool contracts.</p>
 
     <div class="industry-grid">
@@ -246,7 +249,7 @@
     </div>
 
     <div style="margin-top:20px;padding:16px 20px;background:#f7f7f9;border-radius:6px;font-size:13px;color:#505050;line-height:1.6;">
-      The same data foundation, agent execution layer, and action controls apply in each case. The domain-specific work is in the <strong style="color:#111;">business semantics</strong> — the entities, metrics, and tool contracts that make data meaningful to an agent operating in that context.
+      The same data foundation, agent execution layer, and action controls apply in each case. Domain-specific work includes <strong style="color:#111;">business semantics</strong> — entities, metrics, and tool contracts — together with data access, controls, and evaluation appropriate to the use case.
     </div>
   </div>
 </div>
@@ -263,12 +266,12 @@
       <div class="num-card">
         <div class="num-card-n">01</div>
         <div class="num-card-label">Duplicated data</div>
-        <div class="num-card-desc">The same operational data copied across warehouses, lakes, and marts creates storage cost, consistency risk, and integration maintenance. A shared open table format with a single catalog eliminates the copies and gives agents one authoritative source to query.</div>
+        <div class="num-card-desc">The same operational data copied across warehouses, lakes, and marts creates storage cost, consistency risk, and integration maintenance. Shared tables and coordinated catalog access can reduce unnecessary replication while retaining copies needed for recovery, performance, or regulatory separation. Agents use explicitly defined sources of record.</div>
       </div>
       <div class="num-card">
         <div class="num-card-n">02</div>
         <div class="num-card-label">Overlapping tools</div>
-        <div class="num-card-desc">Multiple query engines, BI platforms, and ETL pipelines covering the same data multiplies licensing overhead, training cost, and integration surface. Each additional tool an agent must navigate increases the failure modes and the complexity of keeping tool contracts current.</div>
+        <div class="num-card-desc">Overlapping query engines, BI platforms, and pipelines can add licensing, training, and maintenance costs. Retire redundant components only after their responsibilities are covered. Agents access stable tool contracts rather than navigating every underlying system.</div>
       </div>
       <div class="num-card">
         <div class="num-card-n">03</div>
@@ -285,16 +288,16 @@
     <div class="divider-purple"></div>
     <div class="section-label">Governance and accountability</div>
     <h2>Agents operate within boundaries. People approve what matters.</h2>
-    <p class="lead">An agent-first approach does not reduce accountability. It makes the basis of every decision visible, reviewable, and retained.</p>
+    <p class="lead">These are requirements for the target operating model. Production adoption must demonstrate that permissions, evidence retention, and approval boundaries are enforced by the application and infrastructure.</p>
 
     <div class="control-grid">
       <div class="control-card">
         <div class="control-card-label">Permissions and budgets</div>
-        <div class="control-card-desc">Agents operate within defined data permissions, query budgets, and tool scopes set by the organisation. They cannot access data they are not authorised for, and their computational footprint is bounded. The organisation sets the envelope; the agent works within it.</div>
+        <div class="control-card-desc">The application enforces data permissions, query budgets, and tool scopes defined by the organisation. Verify these boundaries with access-denial and resource-limit tests; prompts alone do not enforce them.</div>
       </div>
       <div class="control-card">
         <div class="control-card-label">Evidence with every recommendation</div>
-        <div class="control-card-desc">Recommendations carry the evidence behind them — the queries run, the data retrieved, the reasoning applied. Reviewers read the case, not just the answer. This is what makes agent outputs reviewable rather than opaque.</div>
+        <div class="control-card-desc">Recommendations reference retained evidence: the data version, queries, results, metric definitions, and a concise rationale. Reviewers can check assumptions and uncertainty against the source evidence.</div>
       </div>
       <div class="control-card">
         <div class="control-card-label">Approval for consequential actions</div>
@@ -302,7 +305,7 @@
       </div>
       <div class="control-card">
         <div class="control-card-label">Durable audit history</div>
-        <div class="control-card-desc">Every investigation, approval, and action is recorded with a timestamp, the identity of the approver, and the evidence at the time of the decision. The audit trail is not a compliance afterthought — it is the foundation of operational trust and the basis for improving the system over time.</div>
+        <div class="control-card-desc">Persist investigations, approvals, and action events with timestamps, verified actor identities, and evidence references. Define retention and access rules, and test recovery. This history supports review, accountability, and improvement.</div>
       </div>
     </div>
   </div>
@@ -329,27 +332,27 @@
         <tbody>
           <tr>
             <td>Investigation time</td>
-            <td style="color:#505050;">Hours or days from question to prepared answer</td>
-            <td style="color:#007040;">Minutes for routine investigative questions</td>
+            <td style="color:#505050;">Measure elapsed time from question to reviewer-accepted answer</td>
+            <td style="color:#007040;">Reduce median and slow-case times for the same question set</td>
             <td style="color:#505050;">Speed determines whether the insight is usable while the decision window is open</td>
           </tr>
           <tr>
             <td>Answer quality</td>
-            <td style="color:#505050;">Reviewer revision rate on analyst-prepared outputs</td>
-            <td style="color:#007040;">Comparable or better acceptance rate on agent-prepared outputs</td>
+            <td style="color:#505050;">Measure correctness, evidence support, and revision rate on a fixed question set</td>
+            <td style="color:#007040;">Match or improve quality under the same review rubric</td>
             <td style="color:#505050;">Quality must match or exceed what was produced before — faster alone is not a win</td>
           </tr>
           <tr>
             <td>Reviewer effort</td>
-            <td style="color:#505050;">Time spent pulling and reconciling data per question</td>
-            <td style="color:#007040;">Shift from data retrieval to reading and approving</td>
-            <td style="color:#505050;">The shift from mechanical work to judgment is where individual value is created</td>
+            <td style="color:#505050;">Measure reviewer time spent checking, correcting, and approving each answer</td>
+            <td style="color:#007040;">Reduce review effort without lowering acceptance standards</td>
+            <td style="color:#505050;">Track preparation effort separately so work is not merely shifted onto reviewers</td>
           </tr>
           <tr>
             <td>Operating cost</td>
-            <td style="color:#505050;">Platform licensing, storage, and integration maintenance per month</td>
-            <td style="color:#007040;">Track infrastructure and licensing cost per insight delivered</td>
-            <td style="color:#505050;">Cost reduction is real only if platform simplification is tracked alongside capability</td>
+            <td style="color:#505050;">Total operating cost and cost per accepted investigation</td>
+            <td style="color:#007040;">Compare the same scope, service levels, and cost categories</td>
+            <td style="color:#505050;">Include infrastructure, licenses, inference, engineering, reviewer time, and operations; distinguish setup costs</td>
           </tr>
           <tr>
             <td>Business outcomes</td>
@@ -369,29 +372,29 @@
     <div class="divider-purple"></div>
     <div class="section-label">See the approach in practice</div>
     <h2>Reference implementation: BASt traffic investigation</h2>
-    <p class="lead">The live demo shows this pattern running against a real dataset: 1,943 permanent counting stations across Germany, 12 months of vehicle records, 15 billion vehicle passages queried live.</p>
+    <p class="lead">The reference implementation uses 15,176,273 station-hour observations from BASt across Jan–Jun 2025 and Jan–Jun 2026, as recorded in its published data manifest. It provides a concrete foundation for testing the approach; it does not establish production scale or business impact.</p>
 
     <div style="background:var(--accent-light);border:1.5px solid var(--accent);border-radius:8px;padding:28px 32px;margin-top:24px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+      <div class="evidence-grid">
 
         <div>
-          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">What it demonstrates</div>
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">Implemented in the reference source</div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
-              <div style="font-size:13px;color:#333;line-height:1.5;">Questions answered in natural language — evidence shown in the conversation, including the SQL query, the rows returned, and the interpretation</div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">Natural-language SQL analysis and structured Station and Corridor tools, with metric definitions, coverage caveats, and data provenance</div>
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
-              <div style="font-size:13px;color:#333;line-height:1.5;">Open table format (Apache Iceberg v2) with time travel — the same data foundation a production system would use, not a mock</div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">Iceberg snapshots on S3 with a published metadata reference; replay requires retained metadata and data files</div>
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
-              <div style="font-size:13px;color:#333;line-height:1.5;">Year-over-year analysis, hourly profiles, and station rankings produced by the same agent from a single question</div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">Server-retained object evidence and action proposals linked by evidence ID, with duplicate-request handling and approval/rejection history in SQLite</div>
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
-              <div style="font-size:13px;color:#333;line-height:1.5;">The same interaction model — question → investigation → evidence — scales to the full production architecture described in the architecture page</div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">The agent tools and API establish a path from questions to evidence and proposals. Verify endpoint behavior, tool selection, and approval transitions on the deployed revision</div>
             </div>
           </div>
         </div>
@@ -405,7 +408,7 @@
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:6px;height:6px;border-radius:50%;background:#d4d4d4;margin-top:5px;flex-shrink:0;"></div>
-              <div style="font-size:13px;color:#505050;line-height:1.5;">Approval workflow: durable action store, idempotency, and controlled operational integrations</div>
+              <div style="font-size:13px;color:#505050;line-height:1.5;">Production approvals: durable storage, authenticated reviewers, scoped evidence access, and controlled external execution. Current SQLite storage is ephemeral and reviewer names are unverified attribution</div>
             </div>
             <div style="display:flex;gap:10px;align-items:flex-start;">
               <div style="width:6px;height:6px;border-radius:50%;background:#d4d4d4;margin-top:5px;flex-shrink:0;"></div>
@@ -417,7 +420,7 @@
             </div>
           </div>
           <div style="margin-top:14px;padding:10px 14px;background:#fff;border-radius:4px;font-size:12px;color:#505050;line-height:1.5;">
-            The architecture page describes what production adds and how the demo connects to it. These gaps are design choices, not defects.
+            Source implementation, deployed acceptance, and production readiness are separate milestones. Operational write-back and external explanatory data sources are not integrated. The architecture page describes the remaining requirements.
           </div>
         </div>
 
@@ -435,8 +438,8 @@
 <div style="background:#0d1117;padding:32px 0;">
   <div class="page" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
     <div>
-      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Simplify the data platform. Put agents to work. Keep decisions accountable.</div>
-      <div style="font-size:13px;color:#8b949e;line-height:1.5;">The architecture is open. The value is in domain knowledge, controls, and adoption.</div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Start with one recurring investigation.</div>
+      <div style="font-size:13px;color:#8b949e;line-height:1.5;">Assign a business owner, establish quality and cost baselines, and fund a bounded pilot. Expand when agreed acceptance criteria are met.</div>
     </div>
     <div style="display:flex;gap:16px;flex-shrink:0;">
       <a href="architecture.html" style="font-size:12px;font-weight:600;color:#8b949e;text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8b949e'">Architecture →</a>

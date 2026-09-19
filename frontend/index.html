@@ -1095,7 +1095,9 @@ async function loadActions() {
           <div style="font-weight:600;color:#111;line-height:1.3;flex:1;">${escHtml(a.title)}</div>
           <span class="action-type-badge ${badgeClass}">${a.type.replace('_',' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase())}</span>
         </div>
-        <div style="font-size:12px;color:#555;line-height:1.5;margin-bottom:4px;">${escHtml(a.description.slice(0,180))}${a.description.length>180?'…':''}</div>
+        <div id="adesc-${a.id}" style="font-size:12px;color:#555;line-height:1.5;margin-bottom:4px;">${escHtml(a.description.slice(0,200))}${a.description.length>200?'…':''}</div>
+        ${a.description.length>200?`<button data-full="${escHtml(a.description)}" data-target="adesc-${a.id}" onclick="toggleDesc(this)" style="background:none;border:none;color:#A100FF;font-size:11px;font-weight:600;cursor:pointer;padding:0 0 4px;display:block;">Show more</button>`:''}
+
         <div style="font-size:11px;color:#aaa;">
           ${escHtml(a.object_type || '')} · ${escHtml(a.object_id || '')} · snapshot ${escHtml((a.snapshot_id||'').slice(0,8))}… · ${proposed}
         </div>
@@ -1128,6 +1130,18 @@ async function resolveAction(id, status) {
     loadActions();
   } catch(e) {
     alert('Network error: ' + e.message);
+  }
+}
+
+function toggleDesc(btn) {
+  const el = document.getElementById(btn.dataset.target);
+  const full = btn.dataset.full;
+  if (btn.textContent === 'Show more') {
+    el.textContent = full;
+    btn.textContent = 'Show less';
+  } else {
+    el.textContent = full.slice(0, 200) + '…';
+    btn.textContent = 'Show more';
   }
 }
 

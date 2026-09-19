@@ -590,7 +590,7 @@ async function loadHourly(stationId) {
   const dateInput = document.getElementById('hourly-date');
   const date = dateInput ? dateInput.value : '2026-01-15';
 
-  // Replace the div entirely so Plotly has zero prior axis state to inherit
+  // Replace div so Plotly has zero prior axis state to inherit
   const _old = document.getElementById('chart-hourly');
   const _new = document.createElement('div');
   _new.id = 'chart-hourly';
@@ -598,38 +598,86 @@ async function loadHourly(stationId) {
   _old.parentNode.replaceChild(_new, _old);
 
   try {
-    const r = await fetch(`${API_BASE}/api/traffic/hourly?station_id=${stationId}&date=${date}`);
-    const rows = await r.json();
+    const resp = await fetch(`${API_BASE}/api/traffic/hourly?station_id=${stationId}&date=${date}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const payload = await resp.json();
+
+    // Support both old (array) and new (object with rows) response shape
+    const rows = Array.isArray(payload) ? payload : (payload.rows || []);
+    const has_r2  = !Array.isArray(payload) && payload.has_r2;
+    const has_sv  = !Array.isArray(payload) && payload.has_sv;
+    const has_pkw = !Array.isArray(payload) && payload.has_pkw;
 
     const byH = {};
     rows.forEach(row => { byH[row.hour] = row; });
+
     const labels = [];
-    const r1Data = [];
+    const r1 = [], r2 = [], sv = [], pkw = [];
     for (let h = 0; h < 24; h++) {
       labels.push(`${String(h).padStart(2,'0')}:00`);
-      r1Data.push(byH[h] ? byH[h].kfz_r1 : 0);
+      const row = byH[h] || {};
+      r1.push(row.kfz_r1 ?? 0);
+      r2.push(row.kfz_r2 ?? null);
+      sv.push(row.sv_r1 ?? null);
+      pkw.push(row.pkw_r1 ?? null);
     }
 
-    const yMax = Math.max(...r1Data, 1);
-    Plotly.newPlot('chart-hourly', [{
-      x: labels,
-      y: r1Data,
-      type: 'scatter',
-      mode: 'lines+markers',
-      name: 'Vehicles / hour',
+    const allSeries = [r1, has_r2 ? r2 : [], has_sv ? sv : [], has_pkw ? pkw : []];
+    const yMax = Math.max(...allSeries.flat().filter(v => v != null), 1);
+
+    const traces = [];
+
+    // KFZ Dir.1 — always shown, filled
+    traces.push({
+      x: labels, y: r1, type: 'scatter', mode: 'lines',
+      name: 'KFZ Dir.1',
       line: { color: '#A100FF', width: 2.5, shape: 'spline' },
-      marker: { color: '#A100FF', size: 4 },
-      fill: 'tozeroy',
-      fillcolor: 'rgba(161,0,255,0.07)',
-      hovertemplate: '<b>%{x}</b><br>%{y:,.0f} vehicles<extra></extra>',
-    }], {
+      fill: 'tozeroy', fillcolor: 'rgba(161,0,255,0.07)',
+      hovertemplate: '<b>%{x}</b><br>KFZ Dir.1: %{y:,.0f}<extra></extra>',
+    });
+
+    // KFZ Dir.2 — only when valid data exists
+    if (has_r2) {
+      traces.push({
+        x: labels, y: r2, type: 'scatter', mode: 'lines',
+        name: 'KFZ Dir.2',
+        line: { color: '#A100FF', width: 2, dash: 'dot', shape: 'spline' },
+        hovertemplate: '<b>%{x}</b><br>KFZ Dir.2: %{y:,.0f}<extra></extra>',
+      });
+    }
+
+    // SV Dir.1 — heavy vehicles
+    if (has_sv) {
+      traces.push({
+        x: labels, y: sv, type: 'scatter', mode: 'lines',
+        name: 'SV Dir.1 (heavy)',
+        line: { color: '#E67E22', width: 2, shape: 'spline' },
+        hovertemplate: '<b>%{x}</b><br>SV Dir.1: %{y:,.0f}<extra></extra>',
+      });
+    }
+
+    // PKW Dir.1 — passenger cars
+    if (has_pkw) {
+      traces.push({
+        x: labels, y: pkw, type: 'scatter', mode: 'lines',
+        name: 'PKW Dir.1 (cars)',
+        line: { color: '#27AE60', width: 2, shape: 'spline' },
+        hovertemplate: '<b>%{x}</b><br>PKW Dir.1: %{y:,.0f}<extra></extra>',
+      });
+    }
+
+    const showLegend = traces.length > 1;
+
+    Plotly.newPlot('chart-hourly', traces, {
       paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff',
       font: LAYOUT_BASE.font,
-      height: 320,
-      margin: { t: 16, r: 24, b: 52, l: 72 },
+      height: 340,
+      margin: { t: showLegend ? 40 : 16, r: 24, b: 52, l: 72 },
+      showlegend: showLegend,
+      legend: { orientation: 'h', x: 0, y: 1.08, font: { size: 11 } },
       yaxis: {
         type: 'linear',
-        range: [0, Math.ceil(yMax * 1.12 / 100) * 100],
+        range: [0, Math.ceil(yMax * 1.15 / 100) * 100],
         tickformat: ',.0f',
         gridcolor: '#f0f0f0',
         zerolinecolor: '#e8e8e8',

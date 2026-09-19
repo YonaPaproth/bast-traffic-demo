@@ -212,26 +212,48 @@ def get_traffic_daily(
 
 
 # ── Hourly traffic per station ─────────────────────────────────────────────────
+import re as _re
+_STATION_ID_RE_MAIN = _re.compile(r'^[A-Z0-9]{2,10}$', _re.IGNORECASE)
+_DATE_RE            = _re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+
 @app.get("/api/traffic/hourly")
 def get_traffic_hourly(
     station_id: str = Query(..., description="Station ID, e.g. BB3592"),
     date: str = Query("2026-01-15", description="Date YYYY-MM-DD"),
 ):
-    """Hourly traffic for a single station on a given date."""
+    """Hourly traffic for a single station on a given date.
+
+    Returns kfz_r1, kfz_r2, kfz_total, sv_r1, pkw_r1 per hour.
+    kfz_r2 is NULL for 2026-01 (old Parquet schema has wrong values).
+    sv_r1/pkw_r1 are NULL for 2026-01 (column absent in old schema).
+    Top-level has_r2/has_sv/has_pkw flags indicate data availability.
+    """
+    if not _STATION_ID_RE_MAIN.match(station_id):
+        raise HTTPException(status_code=400, detail="Invalid station_id format.")
+    if not _DATE_RE.match(date):
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD.")
+
+    # 2026-01 Parquet has old schema: kfz_r2 is wrong, sv_r1/pkw_r1 absent.
+    is_2026_jan = date.startswith("2026-01")
+    r2_expr = "NULL" if is_2026_jan else "SUM(kfz_r2)"
+
     con = get_con()
     try:
         df = con.execute(f"""
             SELECT
                 hour,
-                SUM(kfz_r1)    AS kfz_r1,
-                SUM(kfz_r2)    AS kfz_r2,
-                SUM(kfz_total) AS kfz_total
+                SUM(kfz_r1)                 AS kfz_r1,
+                {r2_expr}                    AS kfz_r2,
+                SUM(kfz_total)              AS kfz_total,
+                SUM(sv_r1)                  AS sv_r1,
+                SUM(pkw_r1)                 AS pkw_r1
             FROM {parquet_source()}
-            WHERE station_id = '{station_id}'
-              AND date::DATE = '{date}'::DATE
+            WHERE station_id = ?
+              AND date::DATE = ?::DATE
             GROUP BY hour
             ORDER BY hour
-        """).df()
+        """, [station_id, date]).df()
 
         if df.empty:
             raise HTTPException(
@@ -239,7 +261,12 @@ def get_traffic_hourly(
                 detail=f"No data for station_id={station_id} on {date}"
             )
 
-        return df.to_dict(orient="records")
+        rows = df.to_dict(orient="records")
+        has_r2  = not is_2026_jan and any(r.get("kfz_r2") not in (None, 0) for r in rows)
+        has_sv  = any(r.get("sv_r1") not in (None, 0) for r in rows)
+        has_pkw = any(r.get("pkw_r1") not in (None, 0) for r in rows)
+
+        return {"rows": rows, "has_r2": has_r2, "has_sv": has_sv, "has_pkw": has_pkw}
     except HTTPException:
         raise
     except Exception as e:

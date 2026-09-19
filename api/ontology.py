@@ -149,20 +149,26 @@ def get_station(con, src: str, station_id: str, snapshot_id: str | None = None) 
     """, [sid]).fetchone()
     volume_pct = pct_row[0] if pct_row else None
 
-    # Traffic exposure heuristic (experimental — see module docstring)
-    sv_share = d["sv_share_pct"] or 0.0
-    exposure_score = (
-        round(sv_share * volume_pct / 1000, 1)
-        if volume_pct is not None
-        else None
-    )
-
     sv_null = d["sv_null_hours"] or 0
     coverage_note = (
         f"{sv_null} of this station's hourly rows have NULL sv_r1 "
-        "(no vehicle-type breakdown in source data for those hours)."
+        "(no vehicle-type breakdown in source data for those hours). "
+        "Classification availability and missing observation hours are not assessed."
         if sv_null > 0
-        else "sv_r1 coverage complete for this station in H1 2026."
+        else (
+            "No NULL sv_r1 values detected; classification availability "
+            "and missing observation hours are not assessed."
+        )
+    )
+
+    # Traffic exposure heuristic: suppressed when NULL sv_r1 rows are present,
+    # because COALESCE(sv_r1, 0) depresses sv_share_pct in ways that cannot be
+    # distinguished from genuinely low heavy-vehicle presence.
+    sv_share = d["sv_share_pct"] or 0.0
+    exposure_score = (
+        round(sv_share * volume_pct / 1000, 1)
+        if volume_pct is not None and sv_null == 0
+        else None
     )
 
     return {
@@ -253,9 +259,13 @@ def get_corridor(
     """, [rc, rn, st]).df().to_dict(orient="records")
 
     sv_null_note = (
-        f"{sv_null} station-hour rows have NULL sv_r1 across this corridor."
+        f"{sv_null} station-hour rows have NULL sv_r1 across this corridor. "
+        "Classification availability and missing observation hours are not assessed."
         if sv_null > 0
-        else "sv_r1 coverage complete for this corridor in H1 2026."
+        else (
+            "No NULL sv_r1 values detected; classification availability "
+            "and missing observation hours are not assessed."
+        )
     )
 
     return {

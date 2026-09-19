@@ -473,14 +473,22 @@ You understand two business objects. Prefer get_object over raw SQL when the use
 
 Station — a counting station on a highway.
   id format: station_id string, e.g. "NW5048"
-  computed properties: avg_daily_kfz, sv_share_pct, congestion_percentile (0=quietest, 100=busiest),
-  maintenance_priority_score (0-10, SV share × congestion)
+  computed properties returned in h1_2026:
+    avg_daily_kfz_r1           — average daily vehicles direction 1
+    sv_share_pct               — heavy-vehicle share of kfz_r1 (COALESCE: NULL sv_r1 treated as 0)
+    traffic_volume_percentile  — rank among all stations by kfz_r1 volume; 0=lowest, 100=highest;
+                                 measures throughput exposure, NOT speed, delay, or congestion
+    traffic_exposure_heuristic — experimental 0-10 score (sv_share × volume_percentile / 1000);
+                                 null when NULL sv_r1 rows detected for this station;
+                                 not validated against maintenance inspection data
 
 Corridor — all stations on one road segment in one federal state, e.g. A1 in NW.
   id format: "{{road_class}}{{road_number}}/{{state}}", e.g. "A1/NW", "B10/RP"
-  computed properties: num_stations, avg_daily_kfz, sv_share_pct, peak_hour, top_stations
+  computed properties: num_stations, avg_daily_kfz_r1, sv_share_pct, peak_hour, top_stations
+  note: total_kfz_r1 is summed station observations — not unique vehicle counts
 
 Use get_object first. Then use execute_sql for follow-up aggregate or YoY queries.
+Do not describe traffic_volume_percentile as congestion. Do not describe traffic_exposure_heuristic as maintenance urgency.
 
 ## SQL data source
 Use this exact expression in FROM clauses:
@@ -510,8 +518,11 @@ _BEDROCK_TOOLS = [
             "name": "get_object",
             "description": (
                 "Retrieve a hydrated domain object — Station or Corridor — with computed properties "
-                "(avg_daily_kfz, congestion_percentile, sv_share_pct, maintenance_priority_score, peak_hour). "
-                "Use this before execute_sql when the user asks about a specific station or road segment."
+                "(avg_daily_kfz_r1, traffic_volume_percentile, sv_share_pct, "
+                "traffic_exposure_heuristic, peak_hour) plus metric_notes and data provenance. "
+                "Use before execute_sql when the user asks about a specific station or road segment. "
+                "traffic_volume_percentile measures throughput exposure, not congestion. "
+                "traffic_exposure_heuristic is experimental and may be null when sv_r1 data is incomplete."
             ),
             "inputSchema": {
                 "json": {

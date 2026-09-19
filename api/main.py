@@ -644,7 +644,10 @@ def _ask_stream(question: str):
                     yield f'data: {json.dumps({"type": "tool_running", "query": f"get_object({obj_type}, {obj_id})"})}\n\n'
                     try:
                         con = get_con()
-                        result = ontology_get_object(con, parquet_source(), obj_type, obj_id)
+                        result = ontology_get_object(
+                            con, parquet_source(), obj_type, obj_id,
+                            snapshot_id=_ICEBERG_MANIFEST.get("snapshot_id"),
+                        )
                         con.close()
                         result_text = json.dumps(result)
                     except Exception as exc:
@@ -690,7 +693,10 @@ def get_ontology_object(object_type: str, object_id: str):
     """
     con = get_con()
     try:
-        result = ontology_get_object(con, parquet_source(), object_type, object_id)
+        result = ontology_get_object(
+            con, parquet_source(), object_type, object_id,
+            snapshot_id=_ICEBERG_MANIFEST.get("snapshot_id"),
+        )
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result

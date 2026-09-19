@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent-first data and operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent:        #A100FF;
+    --accent-dark:   #7B00CC;
+    --accent-darker: #4B0082;
+    --accent-light:  #f3e5ff;
+    --accent-muted:  #f0e6ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #111; -webkit-font-smoothing: antialiased; }
+
+  .page { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+  .section { padding: 60px 0; }
+  .section-alt { background: #f7f7f9; }
+
+  h1 { font-size: 40px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.08; }
+  h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+  .lead { font-size: 16px; color: #505050; line-height: 1.65; max-width: 700px; margin-top: 12px; }
+
+  .divider-purple {
+    height: 3px;
+    background: linear-gradient(to right, var(--accent), var(--accent-dark), var(--accent-darker));
+    width: 48px;
+    margin-bottom: 12px;
+  }
+  .section-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+
+  /* Before / after */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 28px; border: 1.5px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+  .ba-col { padding: 28px 32px; }
+  .ba-col-before { background: #fafafa; border-right: 1.5px solid #e0e0e0; }
+  .ba-col-after { background: var(--accent-light); }
+  .ba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; }
+  .ba-step { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .ba-step:last-child { margin-bottom: 0; }
+  .ba-num {
+    width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+  .ba-text { font-size: 13px; color: #333; line-height: 1.55; }
+
+  /* Industry cards */
+  .industry-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 28px; }
+  .industry-card {
+    background: #fff; border: 1.5px solid #e0e0e0; border-radius: 6px; padding: 20px 16px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .industry-card:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(161,0,255,0.10); }
+  .industry-card-label { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .industry-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .industry-card-desc { font-size: 12px; color: #505050; line-height: 1.6; }
+
+  /* Numbered points */
+  .num-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 28px; }
+  .num-card { padding: 24px; background: #fff; border: 1.5px solid #e0e0e0; border-radius: 6px; }
+  .num-card-n { font-size: 32px; font-weight: 900; color: var(--accent); line-height: 1; margin-bottom: 12px; }
+  .num-card-label { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 8px; }
+  .num-card-desc { font-size: 13px; color: #505050; line-height: 1.6; }
+
+  /* Control cards */
+  .control-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px; }
+  .control-card { background: #fff; border: 1.5px solid #e0e0e0; border-radius: 6px; padding: 20px 22px; border-left: 4px solid var(--accent); }
+  .control-card-label { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 8px; }
+  .control-card-desc { font-size: 13px; color: #505050; line-height: 1.6; }
+
+  /* Metrics table */
+  .metrics-wrap { overflow-x: auto; margin-top: 24px; border-radius: 6px; border: 1px solid #e0e0e0; }
+  .metrics-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 600px; }
+  .metrics-table th, .metrics-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  .metrics-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #505050; background: #f7f7f7; white-space: nowrap; }
+  .metrics-table td:first-child { font-weight: 600; color: #111; min-width: 180px; }
+  .metrics-table tr:last-child td { border-bottom: none; }
+
+  /* Footer */
+  footer { border-top: 1px solid #e0e0e0; padding: 28px 0 24px; font-size: 12px; color: #909090; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 900px) {
+    .industry-grid { grid-template-columns: repeat(2, 1fr); }
+    .num-grid { grid-template-columns: 1fr 1fr; }
+    .control-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 22px; }
+  }
+  @media (max-width: 640px) {
+    .ba-grid { grid-template-columns: 1fr; }
+    .ba-col-before { border-right: none; border-bottom: 1.5px solid #e0e0e0; }
+    .industry-grid { grid-template-columns: 1fr; }
+    .num-grid { grid-template-columns: 1fr; }
+    .page { padding: 0 16px; }
+    h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────── -->
+<header style="background:#fff;border-bottom:2px solid var(--accent);position:sticky;top:0;z-index:50;">
+  <div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;min-height:54px;gap:12px;flex-wrap:wrap;padding:10px 0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:4px;height:28px;background:var(--accent);flex-shrink:0;"></div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#000;letter-spacing:-0.02em;line-height:1.1;">Agent-first data and operations</div>
+          <div style="font-size:11px;color:#505050;margin-top:1px;">For management</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <a href="architecture.html" style="font-size:12px;font-weight:600;color:#505050;text-decoration:none;padding:5px 10px;border:1px solid #e0e0e0;border-radius:2px;white-space:nowrap;transition:color 0.15s,border-color 0.15s;" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='#505050';this.style.borderColor='#e0e0e0'">Architecture</a>
+        <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;padding:5px 10px;border:1.5px solid var(--accent);border-radius:2px;white-space:nowrap;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='transparent'">Live demo →</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<div style="background:#fff;padding:64px 0 48px;">
+  <div class="page">
+    <div class="divider-purple"></div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">Management briefing</div>
+    <h1 style="max-width:860px;">Agent-first data<br>and operations</h1>
+
+    <!-- Thesis -->
+    <div style="margin-top:20px;display:inline-block;padding:18px 24px;background:#111;border-radius:6px;">
+      <div style="font-size:17px;font-weight:700;color:#fff;line-height:1.5;letter-spacing:-0.01em;">
+        Simplify the data platform.&ensp;<span style="color:var(--accent);">Put agents to work.</span>&ensp;Keep decisions accountable.
+      </div>
+    </div>
+
+    <p class="lead" style="margin-top:24px;">
+      Many operational questions require people to move between reports, source systems, spreadsheets, and specialist teams. An agent-first approach brings those steps into a connected workflow: agents gather evidence, test explanations, and prepare recommendations for people to review.
+    </p>
+    <p class="lead">
+      Open data foundations and reusable tools make it possible to start with a focused use case and expand into a governed production capability.
+    </p>
+
+    <!-- Industry scope -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;align-items:center;">
+      <span style="font-size:11px;font-weight:600;color:#909090;text-transform:uppercase;letter-spacing:0.06em;margin-right:4px;">Applies to</span>
+      <span style="font-size:12px;font-weight:600;padding:5px 12px;border:1px solid #e0e0e0;border-radius:2px;color:#505050;">Infrastructure</span>
+      <span style="font-size:12px;font-weight:600;padding:5px 12px;border:1px solid #e0e0e0;border-radius:2px;color:#505050;">Manufacturing</span>
+      <span style="font-size:12px;font-weight:600;padding:5px 12px;border:1px solid #e0e0e0;border-radius:2px;color:#505050;">Logistics</span>
+      <span style="font-size:12px;font-weight:600;padding:5px 12px;border:1px solid #e0e0e0;border-radius:2px;color:#505050;">Finance</span>
+      <span style="font-size:12px;font-weight:600;padding:5px 12px;border:1px solid #e0e0e0;border-radius:2px;color:#505050;">Service operations</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── 1. What changes? ──────────────────────────────────── -->
+<div class="section-alt">
+  <div class="section page">
+    <div class="divider-purple"></div>
+    <div class="section-label">What changes?</div>
+    <h2>From retrieving reports to preparing decisions</h2>
+    <p class="lead">Move from retrieving reports to delegating bounded investigations and preparing decisions.</p>
+
+    <div class="ba-grid">
+      <div class="ba-col ba-col-before">
+        <div class="ba-label" style="color:#505050;">Today — fragmented handoffs</div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">1</div>
+          <div class="ba-text">A question arrives. The person who has it opens three systems, pulls two reports, and waits for a specialist to confirm the numbers.</div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">2</div>
+          <div class="ba-text">Data from different sources is reconciled manually in a spreadsheet. Context is lost in email threads. Assumptions are not recorded.</div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">3</div>
+          <div class="ba-text">A draft answer arrives hours or days later. The decision window may have passed. The reasoning is not attached to the conclusion.</div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:#f0f0f0;color:#505050;">4</div>
+          <div class="ba-text">The next similar question starts from scratch. No institutional memory is built. The cost compounds across teams and months.</div>
+        </div>
+      </div>
+
+      <div class="ba-col ba-col-after">
+        <div class="ba-label" style="color:var(--accent);">With agents — delegated investigation</div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:var(--accent);color:#fff;">1</div>
+          <div class="ba-text">A question is asked in natural language. The agent opens a bounded investigation: it retrieves evidence from connected, governed data sources.</div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:var(--accent);color:#fff;">2</div>
+          <div class="ba-text">The agent tests candidate explanations, runs supporting queries, and assembles the evidence with the reasoning made visible.</div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:var(--accent);color:#fff;">3</div>
+          <div class="ba-text">A prepared recommendation is returned with the evidence attached. The reviewer reads the case and decides. The answer is available while the issue is live.</div>
+        </div>
+        <div class="ba-step">
+          <div class="ba-num" style="background:var(--accent);color:#fff;">4</div>
+          <div class="ba-text">The investigation is retained: the queries, the results, the decision, the approver. Every similar future question has a precedent to build on.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:16px 20px;background:#fff;border-radius:6px;border-left:4px solid var(--accent);font-size:13px;color:#505050;line-height:1.6;">
+      <strong style="color:#111;">The human role shifts, it does not disappear.</strong> Agents remove the mechanical work — pulling data, reconciling sources, drafting first versions. People focus on judgment, approval, and the decisions that carry accountability.
+    </div>
+  </div>
+</div>
+
+<!-- ── 2. Where does it apply? ──────────────────────────── -->
+<div class="section">
+  <div class="page">
+    <div class="divider-purple"></div>
+    <div class="section-label">Where it applies</div>
+    <h2>Any domain where questions routinely cross data boundaries</h2>
+    <p class="lead">The pattern is the same across industries: a question, a bounded investigation, evidence, a prepared recommendation. The domain determines the data sources and the tool contracts.</p>
+
+    <div class="industry-grid">
+      <div class="industry-card">
+        <div class="industry-card-label"><div class="industry-dot"></div>Infrastructure</div>
+        <div class="industry-card-desc">Investigate traffic changes, maintenance windows, corridor performance, and capacity constraints across sensor networks and counting stations.</div>
+      </div>
+      <div class="industry-card">
+        <div class="industry-card-label"><div class="industry-dot"></div>Manufacturing</div>
+        <div class="industry-card-desc">Diagnose production losses, unplanned downtime, quality deviations, and shift-level performance gaps across lines and plants.</div>
+      </div>
+      <div class="industry-card">
+        <div class="industry-card-label"><div class="industry-dot"></div>Logistics</div>
+        <div class="industry-card-desc">Investigate delivery delays, route deviations, carrier performance, and demand spikes against available capacity and contracted commitments.</div>
+      </div>
+      <div class="industry-card">
+        <div class="industry-card-label"><div class="industry-dot"></div>Finance</div>
+        <div class="industry-card-desc">Explain unusual transaction patterns, reconcile position changes, investigate activity against expected behaviour and regulatory thresholds.</div>
+      </div>
+      <div class="industry-card">
+        <div class="industry-card-label"><div class="industry-dot"></div>Service operations</div>
+        <div class="industry-card-desc">Triage service incidents, investigate SLA breaches, identify recurring failure patterns, and prepare escalation briefs from operational data.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;padding:16px 20px;background:#f7f7f9;border-radius:6px;font-size:13px;color:#505050;line-height:1.6;">
+      The same data foundation, agent execution layer, and action controls apply in each case. The domain-specific work is in the <strong style="color:#111;">business semantics</strong> — the entities, metrics, and tool contracts that make data meaningful to an agent operating in that context.
+    </div>
+  </div>
+</div>
+
+<!-- ── 3. Why simplify the stack? ───────────────────────── -->
+<div class="section-alt">
+  <div class="section page">
+    <div class="divider-purple"></div>
+    <div class="section-label">The case for simplification</div>
+    <h2>Reduce duplicated data, overlapping tools, and integration work</h2>
+    <p class="lead">Most organisations have accumulated data platforms, tools, and integrations faster than they have retired the old ones. The cost of that complexity is paid every quarter — in licensing, in maintenance, and in the coordination overhead agents must navigate.</p>
+
+    <div class="num-grid">
+      <div class="num-card">
+        <div class="num-card-n">01</div>
+        <div class="num-card-label">Duplicated data</div>
+        <div class="num-card-desc">The same operational data copied across warehouses, lakes, and marts creates storage cost, consistency risk, and integration maintenance. A shared open table format with a single catalog eliminates the copies and gives agents one authoritative source to query.</div>
+      </div>
+      <div class="num-card">
+        <div class="num-card-n">02</div>
+        <div class="num-card-label">Overlapping tools</div>
+        <div class="num-card-desc">Multiple query engines, BI platforms, and ETL pipelines covering the same data multiplies licensing overhead, training cost, and integration surface. Each additional tool an agent must navigate increases the failure modes and the complexity of keeping tool contracts current.</div>
+      </div>
+      <div class="num-card">
+        <div class="num-card-n">03</div>
+        <div class="num-card-label">Reinvest the savings</div>
+        <div class="num-card-desc">The capacity freed by simplification should move into domain knowledge — the entities, metric definitions, and tool contracts that make data meaningful to agents — and into adoption, controls, and outcome measurement. That is where the durable value is built.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 4. How do we retain control? ────────────────────── -->
+<div class="section">
+  <div class="page">
+    <div class="divider-purple"></div>
+    <div class="section-label">Governance and accountability</div>
+    <h2>Agents operate within boundaries. People approve what matters.</h2>
+    <p class="lead">An agent-first approach does not reduce accountability. It makes the basis of every decision visible, reviewable, and retained.</p>
+
+    <div class="control-grid">
+      <div class="control-card">
+        <div class="control-card-label">Permissions and budgets</div>
+        <div class="control-card-desc">Agents operate within defined data permissions, query budgets, and tool scopes set by the organisation. They cannot access data they are not authorised for, and their computational footprint is bounded. The organisation sets the envelope; the agent works within it.</div>
+      </div>
+      <div class="control-card">
+        <div class="control-card-label">Evidence with every recommendation</div>
+        <div class="control-card-desc">Recommendations carry the evidence behind them — the queries run, the data retrieved, the reasoning applied. Reviewers read the case, not just the answer. This is what makes agent outputs reviewable rather than opaque.</div>
+      </div>
+      <div class="control-card">
+        <div class="control-card-label">Approval for consequential actions</div>
+        <div class="control-card-desc">Actions that affect external systems, trigger operational workflows, or carry organisational consequences require explicit human approval. The agent prepares and proposes. The authorised person approves and takes responsibility. That separation is structural, not optional.</div>
+      </div>
+      <div class="control-card">
+        <div class="control-card-label">Durable audit history</div>
+        <div class="control-card-desc">Every investigation, approval, and action is recorded with a timestamp, the identity of the approver, and the evidence at the time of the decision. The audit trail is not a compliance afterthought — it is the foundation of operational trust and the basis for improving the system over time.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 5. How do we prove value? ────────────────────────── -->
+<div class="section-alt">
+  <div class="section page">
+    <div class="divider-purple"></div>
+    <div class="section-label">Measuring value</div>
+    <h2>Define the baseline. Measure the shift.</h2>
+    <p class="lead">Value claims without baselines are not defensible. Measure before starting; report against the same measures throughout. Present savings as something to measure, not a promised outcome — platform cost reduction depends on what is retired, not just what is added.</p>
+
+    <div class="metrics-wrap">
+      <table class="metrics-table">
+        <thead>
+          <tr>
+            <th>What to measure</th>
+            <th>Baseline (before)</th>
+            <th>Target direction</th>
+            <th>Why it matters</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Investigation time</td>
+            <td style="color:#505050;">Hours or days from question to prepared answer</td>
+            <td style="color:#007040;">Minutes for routine investigative questions</td>
+            <td style="color:#505050;">Speed determines whether the insight is usable while the decision window is open</td>
+          </tr>
+          <tr>
+            <td>Answer quality</td>
+            <td style="color:#505050;">Reviewer revision rate on analyst-prepared outputs</td>
+            <td style="color:#007040;">Comparable or better acceptance rate on agent-prepared outputs</td>
+            <td style="color:#505050;">Quality must match or exceed what was produced before — faster alone is not a win</td>
+          </tr>
+          <tr>
+            <td>Reviewer effort</td>
+            <td style="color:#505050;">Time spent pulling and reconciling data per question</td>
+            <td style="color:#007040;">Shift from data retrieval to reading and approving</td>
+            <td style="color:#505050;">The shift from mechanical work to judgment is where individual value is created</td>
+          </tr>
+          <tr>
+            <td>Operating cost</td>
+            <td style="color:#505050;">Platform licensing, storage, and integration maintenance per month</td>
+            <td style="color:#007040;">Track infrastructure and licensing cost per insight delivered</td>
+            <td style="color:#505050;">Cost reduction is real only if platform simplification is tracked alongside capability</td>
+          </tr>
+          <tr>
+            <td>Business outcomes</td>
+            <td style="color:#505050;">The operational metric that prompted the original question</td>
+            <td style="color:#007040;">Measured at 30, 90, and 180 days against the pre-implementation baseline</td>
+            <td style="color:#505050;">The point is not the agent. The point is whether the operation improved.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── See the approach in practice ─────────────────────── -->
+<div class="section">
+  <div class="page">
+    <div class="divider-purple"></div>
+    <div class="section-label">See the approach in practice</div>
+    <h2>Reference implementation: BASt traffic investigation</h2>
+    <p class="lead">The live demo shows this pattern running against a real dataset: 1,943 permanent counting stations across Germany, 12 months of vehicle records, 15 billion vehicle passages queried live.</p>
+
+    <div style="background:var(--accent-light);border:1.5px solid var(--accent);border-radius:8px;padding:28px 32px;margin-top:24px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">What it demonstrates</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">Questions answered in natural language — evidence shown in the conversation, including the SQL query, the rows returned, and the interpretation</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">Open table format (Apache Iceberg v2) with time travel — the same data foundation a production system would use, not a mock</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">Year-over-year analysis, hourly profiles, and station rankings produced by the same agent from a single question</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#333;line-height:1.5;">The same interaction model — question → investigation → evidence — scales to the full production architecture described in the architecture page</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#909090;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;">What it does not yet prove</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#d4d4d4;margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#505050;line-height:1.5;">Durable investigations with retry, cancellation, and evaluation at concurrent production load</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#d4d4d4;margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#505050;line-height:1.5;">Approval workflow: durable action store, idempotency, and controlled operational integrations</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#d4d4d4;margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#505050;line-height:1.5;">Shared catalog with publication controls, data contracts, access governance, and retention policies</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#d4d4d4;margin-top:5px;flex-shrink:0;"></div>
+              <div style="font-size:13px;color:#505050;line-height:1.5;">Load-tested availability targets and tested operational recovery procedures</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding:10px 14px;background:#fff;border-radius:4px;font-size:12px;color:#505050;line-height:1.5;">
+            The architecture page describes what production adds and how the demo connects to it. These gaps are design choices, not defects.
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(161,0,255,0.2);display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#fff;text-decoration:none;padding:10px 20px;background:var(--accent);border-radius:3px;" onmouseover="this.style.background='var(--accent-dark)'" onmouseout="this.style.background='var(--accent)'">See the live demo →</a>
+        <a href="architecture.html" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;padding:10px 20px;border:1.5px solid var(--accent);border-radius:3px;background:#fff;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='#fff'">Production architecture →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Closing bar ───────────────────────────────────────── -->
+<div style="background:#0d1117;padding:32px 0;">
+  <div class="page" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;">Simplify the data platform. Put agents to work. Keep decisions accountable.</div>
+      <div style="font-size:13px;color:#8b949e;line-height:1.5;">The architecture is open. The value is in domain knowledge, controls, and adoption.</div>
+    </div>
+    <div style="display:flex;gap:16px;flex-shrink:0;">
+      <a href="architecture.html" style="font-size:12px;font-weight:600;color:#8b949e;text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8b949e'">Architecture →</a>
+      <a href="https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/index.html" style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Live demo →</a>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <footer>
+    <span>Agent-first data and operations · Management briefing</span>
+    <span>Reference: BASt traffic investigation · Apache Iceberg · DuckDB · FastAPI · Claude Bedrock</span>
+  </footer>
+</div>
+</body>
+</html>

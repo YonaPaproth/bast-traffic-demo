@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Title</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Remove Plotly if you don't need charts -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // ── THEME: update Tailwind colors to match your :root variables below ──
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        },
+        colors: {
+          accent: {
+            DEFAULT: '#A100FF', // keep in sync with --accent
+            dark:    '#7B00CC', // --accent-dark
+            darker:  '#4B0082', // --accent-darker
+            light:   '#F3E5FF', // --accent-light
+            muted:   '#E8CCFF', // --accent-muted
+          },
+        }
+      }
+    }
+  }
+</script>
+<style>
+  /* ══════════════════════════════════════════════════════════════
+     THEME — change these variables to retheme the whole file.
+     Example swaps (see Fleet_Transaction_Analysis for green theme):
+       Accenture purple:  --accent: #A100FF  --accent-dark: #7B00CC  --accent-darker: #4B0082
+       Client green:      --accent: #007F00  --accent-dark: #005C00  --accent-darker: #003800
+     Also update: Tailwind accent.* colors above + JS ACCENT_SHADES below.
+  ══════════════════════════════════════════════════════════════ */
+  :root {
+    --accent:        #A100FF;
+    --accent-dark:   #7B00CC;
+    --accent-darker: #4B0082;
+    --accent-alpha:  rgba(161, 0, 255, 0.22); /* selection highlight — match --accent */
+    --accent-light:  #f3e5ff;                 /* nav hover bg, light tint */
+    --accent-muted:  #f0e6ff;                 /* chat panel border */
+    --accent-bubble: #f7f0ff;                 /* assistant chat bubble bg */
+    --accent-deep:   #1a0030;                 /* tooltip bg, deep shade */
+    --accent-hover:  rgba(161, 0, 255, 0.10); /* kpi-card hover shadow */
+    --accent-fill:   rgba(161, 0, 255, 0.06); /* chart area fill */
+    --accent-chat-shadow: rgba(161, 0, 255, 0.35); /* chat button shadow */
+  }
+
+  /* ── Base ── */
+  * { box-sizing: border-box; }
+  body {
+    background: #ffffff;
+    color: #000000;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection { background: var(--accent-alpha); color: #000; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #f7f7f7; }
+  ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+  select option { background: #fff; color: #000; }
+
+  /* ── KPI cards ── */
+  .kpi-value { font-variant-numeric: tabular-nums; }
+  .kpi-card {
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    border-left: 4px solid var(--accent);
+    padding: 28px 28px 24px;
+    transition: box-shadow 0.15s;
+  }
+  .kpi-card:hover { box-shadow: 0 4px 16px var(--accent-hover); }
+
+  /* ── Section backgrounds ── */
+  .section-alt { background: #f7f7f7; }
+
+  /* ── Loading spinner ── */
+  .spinner { animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Chart containers ── */
+  .chart-container {
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .chart-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    letter-spacing: -0.01em;
+  }
+  .chart-subtitle {
+    font-size: 13px;
+    color: #505050;
+    margin-top: 2px;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* ── Badges ── */
+  .badge-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border: 1.5px solid var(--accent);
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Styled select ── */
+  select.styled {
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    border-radius: 2px;
+    color: #000;
+    font-size: 13px;
+    padding: 8px 32px 8px 12px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23505050' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+  }
+  select.styled:focus { outline: none; border-color: var(--accent); }
+
+  /* ── Accent divider bar ── */
+  .divider-purple {
+    height: 3px;
+    background: linear-gradient(to right, var(--accent), var(--accent-dark), var(--accent-darker));
+    width: 48px;
+    margin-bottom: 12px;
+  }
+
+  /* ── Responsive grid breakpoints ── */
+  @media (max-width: 900px) {
+    #kpi-section { grid-template-columns: repeat(2, 1fr) !important; }
+    div[style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+  }
+  @media (max-width: 600px) {
+    #kpi-section { grid-template-columns: 1fr !important; }
+    .kpi-card { padding: 20px 20px 18px !important; }
+    .kpi-value { font-size: 40px !important; }
+    div[style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: 1fr !important; }
+  }
+
+  /* ── Skeleton pulse animation ── */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ── Chat bubble styles ── */
+  .chat-msg-user {
+    background: var(--accent); color: #fff;
+    border-radius: 12px 12px 2px 12px;
+    padding: 10px 14px; font-size: 13px;
+    max-width: 88%; align-self: flex-end; line-height: 1.45;
+  }
+  .chat-msg-assistant {
+    background: var(--accent-bubble); color: var(--accent-deep);
+    border-radius: 12px 12px 12px 2px;
+    padding: 10px 14px; font-size: 13px;
+    max-width: 92%; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .chat-msg-status { font-size: 11px; color: #999; align-self: center; font-style: italic; }
+  #chat-messages { scroll-behavior: smooth; }
+</style>
+</head>
+<body class="min-h-screen font-sans">
+
+<!-- ─── Header ──────────────────────────────────────────────────────────── -->
+<!-- Sticky top nav with accent left-bar. Update title, subtitle, and nav links. -->
+<header style="background:#fff;border-bottom:2px solid var(--accent);position:sticky;top:0;z-index:50;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:12px;flex-wrap:wrap;padding:10px 0;">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+        <div style="width:4px;height:32px;background:var(--accent);border-radius:0;flex-shrink:0;"></div>
+        <div style="min-width:0;">
+          <div style="font-size:18px;font-weight:800;color:#000;letter-spacing:-0.03em;line-height:1.1;white-space:nowrap;">Project Title</div>
+          <div style="font-size:11px;color:#505050;margin-top:1px;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Subtitle · Context · Client</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <!-- Add nav links here. Example: -->
+        <a href="#" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;padding:5px 10px;border:1.5px solid var(--accent);border-radius:2px;white-space:nowrap;" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='transparent'">
+          Page Link
+        </a>
+        <span class="badge-outline" style="white-space:nowrap;font-size:11px;">Badge</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─── KPI Section ──────────────────────────────────────────────────────── -->
+<!-- White background section. Replace skeleton divs with real kpiCard() output or static HTML. -->
+<section style="background:#fff;padding:48px 0;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div style="margin-bottom:32px;">
+      <div class="divider-purple"></div>
+      <div class="section-label">Overview</div>
+      <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Section Heading</h2>
+    </div>
+    <!-- 4-column KPI grid. Swap count by changing repeat(4,1fr). -->
+    <div id="kpi-section" style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+      <!-- Static KPI card example — or replace innerHTML via kpiCard() helper in JS -->
+      <div class="kpi-card">
+        <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">Metric Label</div>
+        <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">1.2M</div>
+        <div style="font-size:13px;color:var(--accent);font-weight:500;">Sub-label or date range</div>
+      </div>
+      <div class="kpi-card">
+        <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">Metric Label</div>
+        <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">842</div>
+        <div style="font-size:13px;color:var(--accent);font-weight:500;">Sub-label</div>
+      </div>
+      <div class="kpi-card">
+        <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">Metric Label</div>
+        <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">94%</div>
+        <div style="font-size:13px;color:var(--accent);font-weight:500;">Sub-label</div>
+      </div>
+      <div class="kpi-card">
+        <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">Metric Label</div>
+        <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">7</div>
+        <div style="font-size:13px;color:var(--accent);font-weight:500;">Sub-label</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Chart Section (alt background) ──────────────────────────────────── -->
+<!-- Alternating grey section. chart-container holds a Plotly div. -->
+<section class="section-alt" style="padding:48px 0;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div style="margin-bottom:32px;">
+      <div class="divider-purple"></div>
+      <div class="section-label">Time Series</div>
+      <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Chart Title</h2>
+    </div>
+    <div class="chart-container">
+      <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+        <div class="chart-title">Chart Name</div>
+        <div class="chart-subtitle" id="chart-a-subtitle">Subtitle or data range</div>
+      </div>
+      <!-- Plotly renders into this div -->
+      <div id="chart-a" style="width:100%;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Two-column Chart Section ────────────────────────────────────────── -->
+<!-- Side-by-side charts. Collapses to single column on mobile. -->
+<section style="background:#fff;padding:48px 0;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div style="margin-bottom:32px;">
+      <div class="divider-purple"></div>
+      <div class="section-label">Ranking &amp; Distribution</div>
+      <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Section Heading</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="chart-container">
+        <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+          <div class="chart-title">Left Chart</div>
+          <div class="chart-subtitle">Subtitle</div>
+        </div>
+        <div id="chart-b" style="width:100%;"></div>
+      </div>
+      <div class="chart-container">
+        <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;">
+          <div class="chart-title">Right Chart</div>
+          <div class="chart-subtitle">Subtitle</div>
+        </div>
+        <div id="chart-c" style="width:100%;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Chart Section with Controls ────────────────────────────────────── -->
+<!-- Header row has title on left, select/input controls on right. -->
+<section class="section-alt" style="padding:48px 0;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div style="margin-bottom:32px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="divider-purple"></div>
+        <div class="section-label">Detail View</div>
+        <h2 style="font-size:24px;font-weight:800;color:#000;margin-top:8px;letter-spacing:-0.02em;">Chart with Controls</h2>
+      </div>
+      <!-- Right-side controls -->
+      <select id="my-select" class="styled" style="min-width:160px;" onchange="onSelectChange(this.value)">
+        <option value="option-a">Option A</option>
+        <option value="option-b">Option B</option>
+      </select>
+    </div>
+    <div class="chart-container">
+      <div style="padding:24px 28px 16px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="chart-title">Chart Title</div>
+          <div id="chart-d-subtitle" class="chart-subtitle">Subtitle updates dynamically</div>
+        </div>
+        <!-- Additional inline controls if needed -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;min-width:280px;">
+          <select id="row-select" class="styled" style="flex:1;min-width:200px;">
+            <option>Loading…</option>
+          </select>
+          <input id="date-input" type="date" class="styled" value="2026-01-01" style="width:140px;">
+        </div>
+      </div>
+      <div id="chart-d" style="width:100%;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Footer ───────────────────────────────────────────────────────────── -->
+<!-- Update data source text and stack pills to match your project. -->
+<footer style="border-top:1px solid #e8e8e8;padding:32px 0 24px;background:#fff;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="font-size:13px;color:#505050;">
+        Data source: <strong style="color:#000;">Source Name</strong> · License / context · Year
+      </div>
+      <!-- Stack pills — list your tech stack here -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:11px;font-weight:600;color:var(--accent);letter-spacing:0.05em;">Layer 1</span>
+        <span style="color:#d4d4d4;">→</span>
+        <span style="font-size:11px;font-weight:600;color:var(--accent);letter-spacing:0.05em;">Layer 2</span>
+        <span style="color:#d4d4d4;">→</span>
+        <span style="font-size:11px;font-weight:600;color:var(--accent);letter-spacing:0.05em;">Layer 3</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ─── Chat Panel ────────────────────────────────────────────────────────── -->
+<!-- Floating chat bubble + panel. Wire sendChat() to your own API/SSE endpoint. -->
+<div id="chat-btn" onclick="toggleChat()" title="Ask a question" style="position:fixed;bottom:28px;right:28px;z-index:1000;background:var(--accent);color:#fff;border:none;border-radius:50%;width:56px;height:56px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px var(--accent-chat-shadow);font-size:22px;user-select:none;">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+</div>
+
+<div id="chat-panel" style="position:fixed;bottom:96px;right:28px;width:390px;max-height:540px;background:#fff;border-radius:16px;box-shadow:0 8px 48px rgba(0,0,0,0.18);z-index:999;display:none;flex-direction:column;overflow:hidden;font-family:'Inter',-apple-system,sans-serif;border:1px solid var(--accent-muted);">
+  <div style="background:var(--accent);color:#fff;padding:14px 20px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;letter-spacing:0.01em;">
+    <!-- Update panel title -->
+    <span>Ask about the Data</span>
+    <span onclick="toggleChat()" style="cursor:pointer;font-size:20px;opacity:0.75;line-height:1;">&times;</span>
+  </div>
+  <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:400px;">
+    <!-- Update greeting message -->
+    <div class="chat-msg-assistant">Hi! Ask me anything. Try: <em>"Summarise the key findings"</em></div>
+  </div>
+  <div style="padding:12px 14px;border-top:1px solid #f0f0f0;display:flex;gap:8px;background:#fafafa;">
+    <input id="chat-input" type="text" placeholder="Ask a question…" style="flex:1;border:1px solid #e0d0ff;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;font-family:inherit;color:#222;" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendChat();}">
+    <button onclick="sendChat()" id="chat-send-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">Send</button>
+  </div>
+</div>
+
+<!-- ─── JavaScript ────────────────────────────────────────────────────────── -->
+<script>
+const API_BASE = 'https://your-api-endpoint.example.com'; // ← update this
+
+// ── Read CSS variables at runtime so JS colors stay in sync with :root ──
+// Update --accent* in :root above; these helpers pick them up automatically.
+const _css = getComputedStyle(document.documentElement);
+const ACCENT       = _css.getPropertyValue('--accent').trim();       // e.g. #A100FF
+const ACCENT_DARK  = _css.getPropertyValue('--accent-dark').trim();  // e.g. #7B00CC
+const ACCENT_DEEP  = _css.getPropertyValue('--accent-deep').trim();  // e.g. #1a0030
+const ACCENT_FILL  = _css.getPropertyValue('--accent-fill').trim();  // e.g. rgba(161,0,255,0.06)
+
+// ── Plotly base layout (light theme) ─────────────────────
+const LAYOUT_BASE = {
+  paper_bgcolor: '#ffffff',
+  plot_bgcolor: '#ffffff',
+  font: { family: "'Inter', -apple-system, sans-serif", color: '#505050', size: 11 },
+  margin: { t: 16, r: 24, b: 56, l: 68 },
+  xaxis: {
+    gridcolor: '#f0f0f0', zerolinecolor: '#e8e8e8', linecolor: '#e8e8e8',
+    tickfont: { size: 11, color: '#505050' },
+  },
+  yaxis: {
+    gridcolor: '#f0f0f0', zerolinecolor: '#e8e8e8', linecolor: '#e8e8e8',
+    tickfont: { size: 11, color: '#505050' },
+  },
+  hoverlabel: {
+    bgcolor: ACCENT_DEEP, bordercolor: ACCENT,
+    font: { size: 12, color: '#fff', family: "'Inter', sans-serif" }
+  },
+};
+
+// ── 10-stop accent gradient palette for bar/pie charts ────
+// To retheme: update --accent* in :root; regenerate stops to match.
+// Example green swap: ['#007F00','#006E00','#005C00','#4B0082',...] (see Fleet_Transaction_Analysis)
+const ACCENT_SHADES = [
+  '#A100FF','#8F00E5','#7B00CC','#6800B2','#560099',
+  '#450080','#330066','#22004D','#110033','#05001A',
+];
+
+// ── Number formatter ──────────────────────────────────────
+function fmt(n) {
+  if (!n && n !== 0) return '–';
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + ' Bn.';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + ' Mn.';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+// ── KPI card HTML builder ─────────────────────────────────
+function kpiCard(value, label, sub) {
+  return `
+    <div class="kpi-card">
+      <div style="font-size:13px;font-weight:500;color:#505050;margin-bottom:16px;letter-spacing:0.01em;">${label}</div>
+      <div class="kpi-value" style="font-size:48px;font-weight:800;color:#000;letter-spacing:-0.04em;line-height:1;margin-bottom:10px;">${value}</div>
+      <div style="font-size:13px;color:${ACCENT};font-weight:500;">${sub}</div>
+    </div>`;
+}
+
+// ── Skeleton loader HTML ──────────────────────────────────
+function skeletonCard() {
+  return `
+    <div class="kpi-card" style="animation:pulse 1.5s ease-in-out infinite;">
+      <div style="height:12px;background:#f0f0f0;border-radius:2px;width:60%;margin-bottom:24px;"></div>
+      <div style="height:56px;background:#f0f0f0;border-radius:2px;width:70%;margin-bottom:12px;"></div>
+      <div style="height:10px;background:#f0f0f0;border-radius:2px;width:40%;"></div>
+    </div>`;
+}
+
+// ── Wire up your data loading here ────────────────────────
+// Example:
+// async function loadOverview() {
+//   const data = await fetch(`${API_BASE}/api/overview`).then(r => r.json());
+//   document.getElementById('kpi-section').innerHTML = [
+//     kpiCard(fmt(data.total), 'Total Records', 'Jan–Jun 2026'),
+//     kpiCard(data.count, 'Items', 'active'),
+//     // ...
+//   ].join('');
+// }
+// loadOverview().catch(console.error);
+
+// ── Example: control change handler ──────────────────────
+function onSelectChange(value) {
+  // update chart or subtitle based on selected value
+}
+
+// ── Chat panel toggle ─────────────────────────────────────
+function toggleChat() {
+  const p = document.getElementById('chat-panel');
+  p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+  if (p.style.display === 'flex') document.getElementById('chat-input').focus();
+}
+
+// ── Chat send — wire to your SSE or REST endpoint ─────────
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const question = input.value.trim();
+  if (!question) return;
+  input.value = '';
+  input.disabled = true;
+  document.getElementById('chat-send-btn').disabled = true;
+
+  const box = document.getElementById('chat-messages');
+
+  const uDiv = document.createElement('div');
+  uDiv.className = 'chat-msg-user';
+  uDiv.textContent = question;
+  box.appendChild(uDiv);
+
+  const aDiv = document.createElement('div');
+  aDiv.className = 'chat-msg-assistant';
+  aDiv.textContent = 'Thinking…';
+  box.appendChild(aDiv);
+  box.scrollTop = box.scrollHeight;
+
+  try {
+    // ── Option A: streaming SSE (like BASt uses) ──
+    // const resp = await fetch(`${API_BASE}/api/ask?q=${encodeURIComponent(question)}`);
+    // const reader = resp.body.getReader();
+    // const dec = new TextDecoder();
+    // let buf = '', fullText = '';
+    // while (true) {
+    //   const { done, value } = await reader.read();
+    //   if (done) break;
+    //   buf += dec.decode(value, { stream: true });
+    //   const parts = buf.split('\n\n'); buf = parts.pop();
+    //   for (const part of parts) {
+    //     if (!part.startsWith('data: ')) continue;
+    //     const evt = JSON.parse(part.slice(6));
+    //     if (evt.type === 'text') { fullText += evt.delta; aDiv.textContent = fullText; }
+    //     box.scrollTop = box.scrollHeight;
+    //   }
+    // }
+    // aDiv.textContent = fullText || '(no response)';
+
+    // ── Option B: simple JSON REST ──
+    // const resp = await fetch(`${API_BASE}/api/ask`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ question }),
+    // });
+    // const data = await resp.json();
+    // aDiv.textContent = data.answer;
+
+    // ── Placeholder until wired up ──
+    aDiv.textContent = '(API not yet connected — update sendChat() in template.html)';
+  } catch (e) {
+    aDiv.textContent = 'Error: ' + e.message;
+  }
+
+  input.disabled = false;
+  document.getElementById('chat-send-btn').disabled = false;
+  input.focus();
+  box.scrollTop = box.scrollHeight;
+}
+</script>
+</body>
+</html>

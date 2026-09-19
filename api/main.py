@@ -30,19 +30,27 @@ PARQUET_GLOB = _S3_PATH if _S3_PATH else _LOCAL_GLOB
 USE_S3 = bool(_S3_PATH)
 AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 
-# Single-month Parquet used for lightweight station-metadata queries.
-# Station attributes (name, state, road class, lat/lon) don't change
-# month-to-month; scanning all 6 months for DISTINCT metadata is too slow.
-_STATION_PARQUET = PARQUET_GLOB.replace("**/*.parquet", "year=2026/month=01/traffic.parquet")
 
 # Load Iceberg manifest (bundled as api/iceberg_manifest.json by the Docker build).
-# Used in S3 mode to pin the exact metadata_location for iceberg_scan().
-# Locally, manifest is absent and the raw Parquet glob is used instead.
+# In S3 mode this is required — missing or empty manifest is a hard startup error,
+# not a silent fallback, so misconfigured images fail immediately and visibly.
 _ICEBERG_META_LOCATION = ""
+_ICEBERG_MANIFEST: dict = {}
 _manifest_path = Path(__file__).parent / "iceberg_manifest.json"
-if USE_S3 and _manifest_path.exists():
+if USE_S3:
+    if not _manifest_path.exists():
+        raise RuntimeError(
+            "Running in S3 mode but api/iceberg_manifest.json is not present in the image. "
+            "Run scripts/iceberg_ingest.py, then rebuild the Docker image."
+        )
     with open(_manifest_path) as _f:
-        _ICEBERG_META_LOCATION = json.load(_f).get("metadata_location", "")
+        _ICEBERG_MANIFEST = json.load(_f)
+    _ICEBERG_META_LOCATION = _ICEBERG_MANIFEST.get("metadata_location", "")
+    if not _ICEBERG_META_LOCATION:
+        raise RuntimeError("api/iceberg_manifest.json has no metadata_location. Re-run iceberg_ingest.py.")
+elif _manifest_path.exists():
+    with open(_manifest_path) as _f:
+        _ICEBERG_MANIFEST = json.load(_f)
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -98,10 +106,13 @@ def health():
 # ── Stations ──────────────────────────────────────────────────────────────────
 @app.get("/api/stations")
 def get_stations():
-    """List all stations with metadata."""
+    """List all stations with metadata.
+
+    Filters to January 2026 so total_kfz values are comparable month-to-month
+    and Iceberg partition pruning limits the scan to one partition file.
+    """
     con = get_con()
     try:
-        src = f"read_parquet('{_STATION_PARQUET}', hive_partitioning=false)"
         df = con.execute(f"""
             SELECT
                 station_id,
@@ -112,7 +123,8 @@ def get_stations():
                 ROUND(AVG(lat), 6) AS lat,
                 ROUND(AVG(lon), 6) AS lon,
                 SUM(kfz_r1)        AS total_kfz
-            FROM {src}
+            FROM {parquet_source()}
+            WHERE YEAR(date) = 2026 AND MONTH(date) = 1
             GROUP BY station_id, station_name, state, road_class, road_number
             ORDER BY station_id
         """).df()
@@ -618,55 +630,56 @@ def ask(q: str = Query(..., description="Natural language question about BASt tr
 @app.get("/api/iceberg/info")
 def iceberg_info():
     """
-    Return Apache Iceberg table metadata: snapshot_id, schema, location, etc.
-    Uses the local SQLite-backed PyIceberg catalog.
+    Return runtime Iceberg provenance.
+
+    On ECS: served directly from the bundled manifest — returns the exact
+    metadata_location and snapshot_id the API is querying. No catalog needed.
+
+    Locally: falls back to the SQLite catalog if present.
     """
-    import os as _os
+    if USE_S3:
+        # Manifest is already loaded at startup; if we got here it's valid.
+        return {
+            "format":            "Apache Iceberg v2",
+            "source":            "manifest",
+            "table":             _ICEBERG_MANIFEST.get("table"),
+            "metadata_location": _ICEBERG_MANIFEST.get("metadata_location"),
+            "snapshot_id":       _ICEBERG_MANIFEST.get("snapshot_id"),   # string — JS-safe
+            "total_records":     _ICEBERG_MANIFEST.get("total_records"),
+            "ingested_months":   _ICEBERG_MANIFEST.get("ingested_months"),
+            "warehouse":         _ICEBERG_MANIFEST.get("warehouse"),
+            "last_updated":      _ICEBERG_MANIFEST.get("last_updated"),
+        }
+
+    # Local mode: use SQLite catalog if it exists
     if not Path(ICEBERG_CATALOG_DB).exists():
         raise HTTPException(
             status_code=404,
-            detail="Iceberg catalog not found. Run scripts/create_iceberg.py first."
+            detail="Iceberg catalog not found locally. Run scripts/iceberg_ingest.py first."
         )
-
     try:
         from pyiceberg.catalog.sql import SqlCatalog
 
         catalog = SqlCatalog(
             "bast_local",
             **{
-                "uri": f"sqlite:///{ICEBERG_CATALOG_DB}",
+                "uri":       f"sqlite:///{ICEBERG_CATALOG_DB}",
                 "warehouse": f"file://{ICEBERG_LOCAL_WAREHOUSE}",
             },
         )
         table = catalog.load_table("bast.traffic")
         snap = table.current_snapshot()
-
-        # Get latest metadata file path
-        meta_dir = Path(ICEBERG_LOCAL_WAREHOUSE) / "bast" / "traffic" / "metadata"
-        meta_files = sorted(meta_dir.glob("*.metadata.json"))
-        latest_metadata = meta_files[-1].name if meta_files else None
-
-        # Count data files
-        data_dir = Path(ICEBERG_LOCAL_WAREHOUSE) / "bast" / "traffic" / "data"
-        num_data_files = len(list(data_dir.glob("*.parquet"))) if data_dir.exists() else 0
-
         return {
-            "format": "Apache Iceberg v2",
-            "table": "bast.traffic",
-            "snapshot_id": snap.snapshot_id if snap else None,
+            "format":            "Apache Iceberg v2",
+            "source":            "local_catalog",
+            "table":             "bast.traffic",
+            "metadata_location": table.metadata_location,
+            "snapshot_id":       str(snap.snapshot_id) if snap else None,
             "snapshot_timestamp_ms": snap.timestamp_ms if snap else None,
-            "location": table.location(),
-            "s3_location": "s3://bast-traffic-demo-112220711619/iceberg/bast/traffic",
-            "num_snapshots": len(list(table.snapshots())),
-            "num_data_files": num_data_files,
-            "latest_metadata_file": latest_metadata,
-            "schema": str(table.schema()),
-            "partition_spec": str(table.spec()),
-            "properties": {
-                "format-version": "2",
-                "engine": "PyIceberg + DuckDB",
-                "source": "BASt Federal Highway Traffic Data 2026-01",
-            },
+            "location":          table.location(),
+            "num_snapshots":     len(list(table.snapshots())),
+            "schema":            str(table.schema()),
+            "partition_spec":    str(table.spec()),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

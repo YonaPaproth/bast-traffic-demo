@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Architecture for agent-first systems</title>
+<title>Simple architecture for agent-first systems</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -157,17 +157,17 @@
 <div style="background:#fff;padding:64px 0 48px;">
   <div class="page">
     <div class="divider-purple"></div>
-    <h1 style="max-width:860px;">Architecture for<br>agent-first systems</h1>
+    <h1 style="max-width:860px;">Simple architecture for<br>agent-first systems</h1>
     <div style="margin-top:20px;display:inline-block;padding:18px 24px;background:#111;border-radius:6px;">
       <div style="font-size:17px;font-weight:700;color:#fff;line-height:1.5;letter-spacing:-0.01em;">
         Simplify the data platform.&ensp;<span style="color:var(--accent);">Put agents to work.</span>&ensp;Keep decisions accountable.
       </div>
     </div>
     <p class="lead" style="margin-top:24px;">
-      This page describes the production reference architecture for agent-first systems — responsibilities first, technology choices second. The BASt traffic investigation serves as a reference implementation that demonstrates the foundation and makes the path to production concrete.
+      This page describes the reference architecture for simple agent-first systems. The BASt traffic investigation serves as a reference implementation that demonstrates the foundation.
     </p>
     <p class="lead">
-      <a href="management.html" style="color:var(--accent);font-weight:600;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">See the management briefing</a> for the business case and the five questions every deployment should answer.
+      <a href="management.html" style="color:var(--accent);font-weight:600;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">See the  briefing</a> for business case and the five questions every deployment should answer.
     </p>
   </div>
 </div>
@@ -176,30 +176,30 @@
 <div class="section-alt">
   <div class="section page">
     <div class="divider-purple"></div>
-    <div class="section-label">Production reference architecture</div>
-    <h2>Seven responsibilities. Technology choices follow from workload.</h2>
-    <p class="lead">Each responsibility can be satisfied by more than one technology. The design choices below describe what each layer must do in production — the concrete options follow in the next section.</p>
+    <div class="section-label">Simple reference architecture</div>
+    <h2>Seven responsibilities and technology choices made to follow the workload.</h2>
+    <p class="lead">Each responsibility can be satisfied by more than one technology. The design choices below describe what each layer must do, concrete options follow in the next section.</p>
 
     <div class="resp-wrap">
       <table class="resp-table">
         <thead>
           <tr>
             <th>Responsibility</th>
-            <th>Production design</th>
+            <th>Reference design</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>Data foundation</td>
-            <td>Object storage with open table formats. Validated ingestion pipelines with schema enforcement. Retention and compaction policies. A shared catalog for coordinated table access, publication controls, and data contracts across teams.</td>
+            <td>Object storage with open table formats. Validated ingestion pipelines with schema enforcement. Retention and compaction policies and shared catalog for coordinated table access, publication controls, and data contracts across teams.</td>
           </tr>
           <tr>
             <td>Query execution</td>
-            <td>Embedded or distributed engines selected for the workload — single-node for small isolated queries, distributed for concurrent analytical load. Isolation between tenants or workloads. Latency targets set per query class.</td>
+            <td>Embedded or distributed engines selected for the workload  (single-node for small isolated queries, distributed for concurrent analytical loads). Isolation between tenants or workloads. Latency targets set per query class.</td>
           </tr>
           <tr>
             <td>Business semantics</td>
-            <td>Versioned entity definitions, relationship schemas, and metric registry. Tool contracts that describe what each agent tool does, its inputs and outputs, and what it can and cannot access. These make data meaningful to agents — not just queryable.</td>
+            <td>Versioned entity definitions, relationship schemas, and metric registry. Tool contracts that describe what each agent tool does, its inputs and outputs, and what it can and cannot access. This makes data meaningful to agents.</td>
           </tr>
           <tr>
             <td>Agent execution</td>
@@ -236,15 +236,15 @@
   <div class="page">
     <div class="divider-purple"></div>
     <div class="section-label">Technology implementation</div>
-    <h2>Concrete choices for each responsibility</h2>
-    <p class="lead">Responsibilities drive technology selection — not the reverse. Not every use case inherits every component. Start with what the workload requires and expand when the evidence supports it.</p>
+    <h2>Choices for each responsibility</h2>
+    <p class="lead">Responsibilities drive technology selection: Not every use case inherits every component. Start with what the workload requires and expand when the evidence supports it.</p>
 
     <div class="tech-grid">
 
       <div class="tech-card">
         <div class="tech-card-resp">Data foundation</div>
         <div class="tech-card-label">S3 + Apache Iceberg v2</div>
-        <div class="tech-card-desc">Object storage with ACID semantics, time travel, schema evolution, and partition evolution. The table format is portable — the same files work with DuckDB, Trino, Athena, and Spark.</div>
+        <div class="tech-card-desc">Object storage with ACID semantics, time travel, schema evolution, and partition evolution. The table format is portable and the same files work with DuckDB, Trino, Athena, and Spark.</div>
         <span class="tech-pill">Apache Iceberg v2</span>
         <span class="tech-pill">AWS S3</span>
         <span class="tech-pill tech-pill-gray">Nessie or Glue catalog</span>
@@ -253,7 +253,7 @@
       <div class="tech-card">
         <div class="tech-card-resp">Query execution</div>
         <div class="tech-card-label">DuckDB → Trino → Athena</div>
-        <div class="tech-card-desc">DuckDB for single-node workloads and fast local development. Trino on ECS for concurrent analytical queries at production load. Athena for serverless pay-per-query. The upgrade path is the same Iceberg files — no data migration.</div>
+        <div class="tech-card-desc">DuckDB for single-node workloads and fast local development. Trino on ECS for concurrent analytical queries at production load. Athena for serverless pay-per-query. The upgrade path is the same Iceberg files, no data migration.</div>
         <span class="tech-pill">DuckDB (PoC / isolated)</span>
         <span class="tech-pill tech-pill-gray">Trino (production)</span>
         <span class="tech-pill tech-pill-gray">Athena (serverless)</span>
@@ -288,7 +288,7 @@
       <div class="tech-card">
         <div class="tech-card-resp">Security and operations</div>
         <div class="tech-card-label">IAM + Lake Formation + CloudWatch</div>
-        <div class="tech-card-desc">IAM roles for service identity. Lake Formation for column- and row-level data access controls on the Iceberg catalog. CloudWatch for structured logs and investigation-level cost metrics. GitHub Actions for tested, repeatable deployments.</div>
+        <div class="tech-card-desc">IAM roles for service identity. Lake Formation for column- and row-level data access controls on the Iceberg catalog. CloudWatch for structured logs and investigation-level cost metrics. GitHub Actions or ADO for tested, repeatable deployments.</div>
         <span class="tech-pill tech-pill-gray">IAM + Lake Formation</span>
         <span class="tech-pill tech-pill-gray">CloudWatch</span>
         <span class="tech-pill tech-pill-gray">GitHub Actions CI/CD</span>
@@ -420,8 +420,8 @@
   <div class="page">
     <div class="divider-purple"></div>
     <div class="section-label">Reference implementation</div>
-    <h2>BASt traffic investigation — what it proves, what production adds</h2>
-    <p class="lead">The demo is not a toy. It implements the same data contracts, tool contracts, and interaction model the production architecture requires. The gaps are explicit — not hidden.</p>
+    <h2>Demo: BASt traffic investigation</h2>
+    <p class="lead">The demo implements the same data contracts, tool contracts, and interaction model the production architecture requires.</p>
 
     <!-- You are here callout -->
     <div style="margin-top:20px;padding:16px 20px;background:var(--accent-light);border:2px solid var(--accent);border-radius:6px;display:flex;align-items:flex-start;gap:12px;">
@@ -438,7 +438,7 @@
       <table class="prog-table">
         <thead>
           <tr>
-            <th>Architectural concern</th>
+            <th>Architectural concerns</th>
             <th class="col-demo">Reference implementation: BASt</th>
             <th>Production extension</th>
           </tr>
@@ -521,8 +521,8 @@
     <p class="lead">The open-source production stack (Option A) delivers equivalent analytical capability at a fraction of the licensing cost. The performance gap is less than 10%. The licensing gap is 15×.</p>
 
     <div style="padding:20px 24px;background:#0d1117;border-radius:6px;margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;">Option A is not about paying less. It is about paying for the right thing.</div>
-      <div style="font-size:12px;color:#8b949e;line-height:1.6;">Databricks and Microsoft Fabric concentrate spend in platform licenses. The open-source path shifts that spend into delivery, domain knowledge, agent tooling, and embedded capability — clients pay for business outcomes, not infrastructure overhead.</div>
+      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;">Option A is about paying for the right thing.</div>
+      <div style="font-size:12px;color:#8b949e;line-height:1.6;">Databricks and Microsoft Fabric concentrate spend in platform licenses. The open-source path shifts that spend into delivery, domain knowledge, agent tooling, and embedded capability: pay for business outcomes, not infrastructure overhead.</div>
     </div>
 
     <div class="compare-wrap">

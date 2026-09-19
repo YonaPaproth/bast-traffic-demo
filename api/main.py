@@ -14,9 +14,15 @@ import json
 import boto3
 import duckdb
 from fastapi import FastAPI, HTTPException, Query
-from api.ontology import get_object as ontology_get_object
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from api.ontology import get_object as ontology_get_object
+from api.actions import (
+    init_db, store_evidence, get_evidence,
+    create_action as actions_create, get_action, list_actions, resolve_action,
+    VALID_TYPES,
+)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent.parent
@@ -52,6 +58,16 @@ if USE_S3:
 elif _manifest_path.exists():
     with open(_manifest_path) as _f:
         _ICEBERG_MANIFEST = json.load(_f)
+
+# ── Actions SQLite DB ─────────────────────────────────────────────────────────
+# On ECS the container filesystem is ephemeral — /tmp resets on each deploy,
+# which is intentional: the demo always starts with a clean action queue.
+_ACTIONS_DB_PATH = (
+    "/tmp/bast_actions.db"
+    if USE_S3
+    else str(BASE_DIR / "data" / "bast_actions.db")
+)
+_actions_db = init_db(_ACTIONS_DB_PATH)
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -564,6 +580,52 @@ _BEDROCK_TOOLS = [
             },
         }
     },
+    {
+        "toolSpec": {
+            "name": "create_action",
+            "description": (
+                "Propose an action for human review. Call this only after get_object has returned "
+                "an evidence_id — the server binds the proposal to that exact evidence and its "
+                "snapshot. Do not call without a valid evidence_id. "
+                "Types: MAINTENANCE_RECOMMENDATION, ANOMALY_FLAG, REPORT_DRAFT."
+            ),
+            "inputSchema": {
+                "json": {
+                    "type": "object",
+                    "properties": {
+                        "idempotency_key": {
+                            "type": "string",
+                            "description": (
+                                "A UUID you generate for this specific proposal. "
+                                "Re-submitting the same key with the same payload is a no-op. "
+                                "Same key with different content returns a conflict."
+                            ),
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["MAINTENANCE_RECOMMENDATION", "ANOMALY_FLAG", "REPORT_DRAFT"],
+                        },
+                        "title": {
+                            "type": "string",
+                            "description": "Short, specific proposal title (max ~80 chars).",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": (
+                                "Reasoning for the proposal, grounded in the evidence. "
+                                "Include the metric values that led to this recommendation."
+                            ),
+                        },
+                        "evidence_id": {
+                            "type": "string",
+                            "description": "The evidence_id returned by get_object for this object.",
+                        },
+                    },
+                    "required": ["idempotency_key", "type", "title", "description", "evidence_id"],
+                }
+            },
+        }
+    },
 ]
 
 
@@ -660,9 +722,49 @@ def _ask_stream(question: str):
                             snapshot_id=_ICEBERG_MANIFEST.get("snapshot_id"),
                         )
                         con.close()
+                        if "error" not in result:
+                            # Store evidence server-side; return the ID so the agent
+                            # can reference it in create_action without resupplying data.
+                            ev_id = store_evidence(_actions_db, obj_type, obj_id, result)
+                            result["evidence_id"] = ev_id
                         result_text = json.dumps(result)
                     except Exception as exc:
                         result_text = json.dumps({"error": str(exc)})
+                    tool_results.append({
+                        "toolUseId": tu["toolUseId"],
+                        "content": [{"text": result_text}],
+                    })
+
+                elif tu["name"] == "create_action":
+                    ikey    = tu["input"].get("idempotency_key", "")
+                    atype   = tu["input"].get("type", "")
+                    title   = tu["input"].get("title", "")
+                    desc    = tu["input"].get("description", "")
+                    ev_id   = tu["input"].get("evidence_id", "")
+                    yield f'data: {json.dumps({"type": "tool_running", "query": f"create_action({atype})"})}\n\n'
+                    try:
+                        action, outcome = actions_create(
+                            _actions_db, ikey, atype, title, desc, ev_id,
+                        )
+                        if outcome == "conflict":
+                            result_text = json.dumps({
+                                "error": "conflict",
+                                "message": (
+                                    "The same idempotency_key was already used with different content. "
+                                    "Generate a new UUID for a different proposal."
+                                ),
+                                "existing_action_id": action["id"] if action else None,
+                            })
+                        else:
+                            result_text = json.dumps({
+                                "action_id": action["id"],
+                                "status":    action["status"],
+                                "outcome":   outcome,
+                            })
+                    except (ValueError, LookupError) as exc:
+                        result_text = json.dumps({"error": str(exc)})
+                    except Exception as exc:
+                        result_text = json.dumps({"error": f"Unexpected error: {exc}"})
                     tool_results.append({
                         "toolUseId": tu["toolUseId"],
                         "content": [{"text": result_text}],
@@ -710,6 +812,8 @@ def get_ontology_object(object_type: str, object_id: str):
         )
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
+        ev_id = store_evidence(_actions_db, object_type, object_id, result)
+        result["evidence_id"] = ev_id
         return result
     except HTTPException:
         raise
@@ -717,6 +821,59 @@ def get_ontology_object(object_type: str, object_id: str):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         con.close()
+
+
+# ── Action endpoints ──────────────────────────────────────────────────────────
+
+class ResolveRequest(BaseModel):
+    status: str
+    resolved_by: str = "Operations Team"
+
+
+@app.get("/api/actions")
+def list_actions_endpoint(
+    status: str | None = Query(None, description="Filter by status: pending | approved | rejected"),
+    type:   str | None = Query(None, description="Filter by type: MAINTENANCE_RECOMMENDATION | ANOMALY_FLAG | REPORT_DRAFT"),
+):
+    """List all action proposals. Newest first."""
+    if status and status not in {"pending", "approved", "rejected"}:
+        raise HTTPException(status_code=400, detail=f"Invalid status '{status}'.")
+    if type and type not in VALID_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid type '{type}'.")
+    return list_actions(_actions_db, status=status, action_type=type)
+
+
+@app.get("/api/actions/{action_id}")
+def get_action_endpoint(action_id: str):
+    """Return a single action with its full status history."""
+    action = get_action(_actions_db, action_id)
+    if action is None:
+        raise HTTPException(status_code=404, detail=f"Action '{action_id}' not found.")
+    return action
+
+
+@app.patch("/api/actions/{action_id}")
+def resolve_action_endpoint(action_id: str, body: ResolveRequest):
+    """Approve or reject a pending action (human only — agent cannot call this).
+
+    resolved_by is attribution from the caller; it is not verified identity.
+    Concurrent requests produce exactly one winner; the loser receives 409.
+    """
+    if body.status not in {"approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="status must be 'approved' or 'rejected'.")
+    if not body.resolved_by or not body.resolved_by.strip():
+        raise HTTPException(status_code=400, detail="resolved_by is required.")
+
+    action, success = resolve_action(_actions_db, action_id, body.status, body.resolved_by.strip())
+    if action is None:
+        raise HTTPException(status_code=404, detail=f"Action '{action_id}' not found.")
+    if not success:
+        current = action.get("status", "unknown")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Action is already '{current}' and cannot be transitioned. Only pending actions can be resolved.",
+        )
+    return action
 
 
 @app.get("/api/ask")

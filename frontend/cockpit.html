@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BASt Digital Brain — AI Cockpit</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Nav ─────────────────────────────────────────────────────────────── */
+    .nav {
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+      padding: 0 20px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+    .nav-brand {
+      font-size: 14px;
+      font-weight: 600;
+      color: #58a6ff;
+      margin-right: 20px;
+      white-space: nowrap;
+    }
+    .nav-links { display: flex; gap: 0; }
+    .nav-links a {
+      color: #8b949e;
+      text-decoration: none;
+      font-size: 13px;
+      padding: 0 12px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .nav-links a:hover { color: #e6edf3; }
+    .nav-links a.active { color: #e6edf3; border-bottom-color: #f78166; }
+    .nav-right {
+      margin-left: auto;
+      font-size: 11px;
+      color: #484f58;
+      white-space: nowrap;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    .workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Conversation ────────────────────────────────────────────────────── */
+    .conversation {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 0 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    /* ── Welcome state ───────────────────────────────────────────────────── */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 48px;
+      gap: 12px;
+      color: #8b949e;
+      text-align: center;
+    }
+    .welcome-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    .welcome h1 { font-size: 22px; font-weight: 600; color: #e6edf3; }
+    .welcome p { font-size: 14px; max-width: 480px; line-height: 1.6; }
+    .suggestions {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center;
+      margin-top: 16px;
+      max-width: 680px;
+    }
+    .sug-btn {
+      background: #161b22;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 7px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 12.5px;
+      font-family: inherit;
+      transition: border-color 0.15s, color 0.15s;
+      line-height: 1.4;
+      text-align: left;
+    }
+    .sug-btn:hover { border-color: #58a6ff; color: #e6edf3; }
+
+    /* ── Turn: user question ─────────────────────────────────────────────── */
+    .turn-user {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      font-size: 12px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .avatar-user { background: #21262d; color: #8b949e; }
+    .avatar-ai   { background: linear-gradient(135deg, #1f6feb, #388bfd); color: #fff; font-size: 13px; }
+    .turn-user .text { font-size: 14px; color: #e6edf3; line-height: 1.6; padding-top: 4px; }
+
+    /* ── Turn: AI response ───────────────────────────────────────────────── */
+    .turn-ai {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .turn-ai-body { flex: 1; min-width: 0; }
+
+    .response-text {
+      font-size: 14px;
+      line-height: 1.75;
+      color: #c9d1d9;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ── Tool pills ──────────────────────────────────────────────────────── */
+    .tool-pills { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+    .tool-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 5px;
+      padding: 5px 10px;
+      font-size: 12px; color: #8b949e;
+      width: fit-content;
+    }
+    .pill-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #3fb950;
+      flex-shrink: 0;
+    }
+    .pill-dot.running { animation: pulse 1.1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .pill-dot.done { background: #484f58; animation: none; }
+    .pill-query {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 11px; color: #6e7681;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      max-width: 400px;
+    }
+
+    /* ── Query result table ──────────────────────────────────────────────── */
+    .result-meta {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 10px;
+    }
+    .result-badge {
+      font-size: 11px; color: #8b949e;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+    .table-toggle {
+      background: none; border: none;
+      color: #58a6ff; font-size: 12px; cursor: pointer; padding: 0;
+      font-family: inherit;
+    }
+    .table-toggle:hover { text-decoration: underline; }
+    .table-wrap { display: none; margin-top: 8px; overflow-x: auto; }
+    .table-wrap.open { display: block; }
+    .data-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 12px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+    }
+    .data-table th {
+      background: #161b22; color: #8b949e;
+      padding: 6px 12px; text-align: left;
+      border-bottom: 1px solid #30363d;
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 5px 12px;
+      border-bottom: 1px solid #21262d;
+      color: #c9d1d9;
+      max-width: 240px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .data-table tr:hover td { background: #161b22; }
+    .overflow-note {
+      font-size: 11px; color: #484f58;
+      padding: 5px 12px;
+    }
+
+    /* ── Chart container ─────────────────────────────────────────────────── */
+    .chart-wrap {
+      margin-top: 12px;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #161b22;
+    }
+
+    /* ── Error ───────────────────────────────────────────────────────────── */
+    .error-block {
+      background: #1c0a0a;
+      border: 1px solid #6e1c1c;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px; color: #f85149;
+      margin-top: 8px;
+    }
+    .partial-note {
+      font-size: 12px; color: #484f58;
+      margin-top: 6px;
+    }
+
+    /* ── Input area ──────────────────────────────────────────────────────── */
+    .input-area {
+      padding: 12px 0 20px;
+      flex-shrink: 0;
+    }
+    .input-box {
+      display: flex; gap: 8px; align-items: flex-end;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 10px 12px;
+      transition: border-color 0.15s;
+    }
+    .input-box:focus-within { border-color: #58a6ff; }
+    #q {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: #e6edf3; font-size: 14px; font-family: inherit;
+      resize: none; max-height: 140px; line-height: 1.55;
+      overflow-y: auto;
+    }
+    #q::placeholder { color: #484f58; }
+    .btn-ask {
+      background: #238636; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 7px 16px; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-ask:hover:not(:disabled) { background: #2ea043; }
+    .btn-ask:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-stop {
+      background: #6e1c1c; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 7px 14px; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: background 0.15s;
+      flex-shrink: 0;
+      display: none;
+    }
+    .btn-stop:hover { background: #8d2525; }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-brand">BASt Digital Brain</span>
+  <div class="nav-links">
+    <a href="index.html">Dashboard</a>
+    <a href="cockpit.html" class="active">AI Cockpit</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="management.html">Management</a>
+  </div>
+  <span class="nav-right">Phase 1 · BASt traffic data · H1 2025 + H1 2026</span>
+</nav>
+
+<div class="workspace">
+  <div class="conversation" id="conv">
+
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">🧠</div>
+      <h1>AI Cockpit</h1>
+      <p>Ask anything about German highway traffic. The agent queries live data,
+         explains findings, and renders interactive charts.</p>
+      <div class="suggestions">
+        <button class="sug-btn" onclick="sendQ(this.textContent)">Average hourly traffic on A1 in NRW for June 2026</button>
+        <button class="sug-btn" onclick="sendQ(this.textContent)">Top 10 stations by heavy-vehicle share H1 2026</button>
+        <button class="sug-btn" onclick="sendQ(this.textContent)">Compare total KFZ by state — 2025 vs 2026</button>
+        <button class="sug-btn" onclick="sendQ(this.textContent)">Daily traffic trend at station NW5048 in May 2026</button>
+        <button class="sug-btn" onclick="sendQ(this.textContent)">Which Autobahns had the biggest YoY traffic change?</button>
+        <button class="sug-btn" onclick="sendQ(this.textContent)">Scatter: volume vs heavy-vehicle share for A-roads in NW H1 2026</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="input-area">
+    <div class="input-box">
+      <textarea id="q" rows="1"
+        placeholder="Ask a traffic question…"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendQ()}"
+        oninput="autoResize(this)"></textarea>
+      <button class="btn-ask" id="btn-ask" onclick="sendQ()">Ask</button>
+      <button class="btn-stop" id="btn-stop" onclick="stop()">Stop</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API = 'https://d1905gj4v53w41.cloudfront.net';
+
+// ── State ───────────────────────────────────────────────────────────────────
+let _es = null;           // active EventSource
+let _aiBody = null;       // current .turn-ai-body element
+let _textEl = null;       // current .response-text element
+let _pillsEl = null;      // current .tool-pills element
+let _activePill = null;   // last tool pill div
+let _chartIdx = 0;        // monotonic chart id counter
+
+// ── Auto-resize textarea ─────────────────────────────────────────────────────
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+// ── Send question ────────────────────────────────────────────────────────────
+function sendQ(text) {
+  const q = text || document.getElementById('q').value.trim();
+  if (!q || _es) return;
+
+  // Hide welcome
+  const w = document.getElementById('welcome');
+  if (w) w.style.display = 'none';
+
+  // Clear input
+  const inp = document.getElementById('q');
+  inp.value = '';
+  inp.style.height = 'auto';
+
+  const conv = document.getElementById('conv');
+
+  // User turn
+  const userTurn = document.createElement('div');
+  userTurn.className = 'turn-user';
+  userTurn.innerHTML = `
+    <div class="avatar avatar-user">Y</div>
+    <div class="text">${esc(q)}</div>`;
+  conv.appendChild(userTurn);
+
+  // AI turn scaffold
+  const aiTurn = document.createElement('div');
+  aiTurn.className = 'turn-ai';
+  aiTurn.innerHTML = `<div class="avatar avatar-ai">AI</div>`;
+  _aiBody = document.createElement('div');
+  _aiBody.className = 'turn-ai-body';
+  _textEl = document.createElement('div');
+  _textEl.className = 'response-text';
+  _pillsEl = document.createElement('div');
+  _pillsEl.className = 'tool-pills';
+  _aiBody.appendChild(_pillsEl);
+  _aiBody.appendChild(_textEl);
+  aiTurn.appendChild(_aiBody);
+  conv.appendChild(aiTurn);
+  scrollBottom();
+
+  // Button state
+  document.getElementById('btn-ask').disabled = true;
+  document.getElementById('btn-stop').style.display = '';
+
+  // Open SSE
+  _es = new EventSource(`${API}/api/cockpit/ask?q=${encodeURIComponent(q)}`);
+  _es.onmessage = onMsg;
+  _es.onerror   = onErr;
+}
+
+// ── SSE event handler ────────────────────────────────────────────────────────
+function onMsg(e) {
+  let ev;
+  try { ev = JSON.parse(e.data); } catch { return; }
+
+  switch (ev.type) {
+
+    case 'text':
+      _textEl.textContent += ev.delta;
+      break;
+
+    case 'tool_start':
+      _activePill = document.createElement('div');
+      _activePill.className = 'tool-pill';
+      _activePill.innerHTML = `
+        <span class="pill-dot running"></span>
+        <span class="pill-label">${toolLabel(ev.name)}</span>`;
+      _pillsEl.appendChild(_activePill);
+      break;
+
+    case 'tool_running': {
+      if (!_activePill) break;
+      _activePill.querySelector('.pill-dot').classList.remove('running');
+      _activePill.querySelector('.pill-dot').classList.add('done');
+      if (ev.query) {
+        const qEl = document.createElement('span');
+        qEl.className = 'pill-query';
+        qEl.textContent = ' · ' + ev.query;
+        qEl.title = ev.query;
+        _activePill.appendChild(qEl);
+      }
+      break;
+    }
+
+    case 'query_result':
+      renderQueryResult(ev);
+      break;
+
+    case 'chart_spec':
+      renderChart(ev);
+      break;
+
+    case 'error': {
+      const errDiv = document.createElement('div');
+      errDiv.className = 'error-block';
+      errDiv.textContent = ev.message || 'An error occurred.';
+      _aiBody.appendChild(errDiv);
+      if (ev.recoverable === false) cleanup();
+      break;
+    }
+
+    case 'done':
+      finishPills();
+      cleanup();
+      break;
+  }
+  scrollBottom();
+}
+
+function onErr() {
+  if (_textEl && (_textEl.textContent || _aiBody.querySelector('.chart-wrap'))) {
+    const note = document.createElement('div');
+    note.className = 'partial-note';
+    note.textContent = 'Connection interrupted — response above may be partial.';
+    _aiBody.appendChild(note);
+  }
+  cleanup();
+}
+
+// ── Stop ─────────────────────────────────────────────────────────────────────
+function stop() {
+  if (_es) { _es.close(); _es = null; }
+  if (_aiBody) {
+    const note = document.createElement('div');
+    note.className = 'partial-note';
+    note.textContent = 'Stopped.';
+    _aiBody.appendChild(note);
+  }
+  cleanup();
+}
+
+// ── Cleanup ──────────────────────────────────────────────────────────────────
+function cleanup() {
+  if (_es) { _es.close(); _es = null; }
+  finishPills();
+  document.getElementById('btn-ask').disabled = false;
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('q').focus();
+}
+
+function finishPills() {
+  if (!_pillsEl) return;
+  _pillsEl.querySelectorAll('.pill-dot.running').forEach(d => {
+    d.classList.remove('running');
+    d.classList.add('done');
+  });
+}
+
+// ── Render: query result table ───────────────────────────────────────────────
+function renderQueryResult(ev) {
+  const meta = document.createElement('div');
+  meta.className = 'result-meta';
+
+  const badge = document.createElement('span');
+  badge.className = 'result-badge';
+  const rowLabel = ev.row_count + (ev.overflow ? '+' : '') + ' rows';
+  const modeLabel = ev.source_mode === 'iceberg' ? 'Iceberg' : 'Parquet';
+  badge.textContent = `${rowLabel} · ${modeLabel}`;
+  meta.appendChild(badge);
+
+  const toggleId = `tbl-${ev.result_id}`;
+  const toggle = document.createElement('button');
+  toggle.className = 'table-toggle';
+  toggle.textContent = 'Show data';
+  toggle.onclick = () => {
+    const wrap = document.getElementById(toggleId);
+    const open = wrap.classList.toggle('open');
+    toggle.textContent = open ? 'Hide data' : 'Show data';
+  };
+  meta.appendChild(toggle);
+  _aiBody.appendChild(meta);
+
+  // Table
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  wrap.id = toggleId;
+  if (ev.preview && ev.preview.length > 0) {
+    const cols = ev.columns || [];
+    const thead = cols.map(c => `<th>${esc(c.name)}</th>`).join('');
+    const tbody = ev.preview.map(row =>
+      '<tr>' + cols.map(c => `<td title="${esc(String(row[c.name] ?? ''))}">${esc(String(row[c.name] ?? ''))}</td>`).join('') + '</tr>'
+    ).join('');
+    const overflow = ev.overflow
+      ? `<tr><td colspan="${cols.length}" class="overflow-note">Showing first ${ev.preview.length} rows of ${ev.row_count}+</td></tr>`
+      : '';
+    wrap.innerHTML = `<table class="data-table"><thead><tr>${thead}</tr></thead><tbody>${tbody}${overflow}</tbody></table>`;
+  } else {
+    wrap.innerHTML = '<p style="color:#484f58;font-size:12px;padding:8px">No rows returned.</p>';
+  }
+  _aiBody.appendChild(wrap);
+}
+
+// ── Render: Plotly chart ─────────────────────────────────────────────────────
+function renderChart(ev) {
+  const chartWrap = document.createElement('div');
+  chartWrap.className = 'chart-wrap';
+  const chartId = `chart-${_chartIdx++}`;
+  const chartDiv = document.createElement('div');
+  chartDiv.id = chartId;
+  chartDiv.style.height = '340px';
+  chartWrap.appendChild(chartDiv);
+  _aiBody.appendChild(chartWrap);
+
+  // Build Plotly traces
+  const isBar = ev.kind === 'bar';
+  const isScatter = ev.kind === 'scatter';
+  const traces = (ev.traces || []).map(t => ({
+    x: t.x,
+    y: t.y,
+    name: t.name,
+    type: isBar ? 'bar' : 'scatter',
+    mode: isScatter ? 'markers' : 'lines+markers',
+    marker: { size: isScatter ? 6 : 4 },
+    line: isBar ? undefined : { width: 2 },
+  }));
+
+  const layout = {
+    template: 'plotly_dark',
+    paper_bgcolor: '#161b22',
+    plot_bgcolor: '#161b22',
+    title: {
+      text: ev.title || '',
+      font: { size: 13, color: '#e6edf3' },
+      x: 0.02, xanchor: 'left',
+    },
+    xaxis: {
+      title: { text: ev.x_label || '', font: { size: 11, color: '#8b949e' } },
+      gridcolor: '#21262d', color: '#8b949e',
+      tickfont: { size: 11 },
+    },
+    yaxis: {
+      title: { text: ev.y_label || '', font: { size: 11, color: '#8b949e' } },
+      gridcolor: '#21262d', color: '#8b949e',
+      tickfont: { size: 11 },
+    },
+    legend: {
+      orientation: 'h', y: -0.22,
+      font: { color: '#8b949e', size: 11 },
+    },
+    margin: { l: 56, r: 16, t: 40, b: 56 },
+    barmode: 'group',
+    font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
+    hoverlabel: { bgcolor: '#21262d', bordercolor: '#30363d', font: { color: '#e6edf3', size: 12 } },
+  };
+
+  Plotly.newPlot(chartId, traces, layout, { responsive: true, displayModeBar: false });
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function toolLabel(name) {
+  return {
+    execute_sql:   'Querying traffic data',
+    render_chart:  'Rendering chart',
+    get_object:    'Loading object',
+    create_action: 'Creating action',
+  }[name] || name;
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function scrollBottom() {
+  const conv = document.getElementById('conv');
+  conv.scrollTop = conv.scrollHeight;
+}
+</script>
+</body>
+</html>

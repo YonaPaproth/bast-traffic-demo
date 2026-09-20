@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from api.ontology import get_object as ontology_get_object
+from api.cockpit import router as _cockpit_router, configure as _cockpit_configure
 from api.actions import (
     init_db, store_evidence, get_evidence,
     create_action as actions_create, get_action, list_actions, resolve_action,
@@ -531,6 +532,18 @@ _PARQUET_EXPR = (
 )
 
 _BEDROCK_MODEL = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+# ── Cockpit router ────────────────────────────────────────────────────────────
+_cockpit_configure(
+    get_con_fn=get_con,
+    parquet_source_fn=parquet_source,
+    parquet_expr=_PARQUET_EXPR,
+    iceberg_manifest=_ICEBERG_MANIFEST,
+    actions_db=_actions_db,
+    aws_region=AWS_REGION,
+    bedrock_model=_BEDROCK_MODEL,
+)
+app.include_router(_cockpit_router)
 
 _BEDROCK_SYSTEM = f"""You are a traffic operations analyst assistant for BASt (German Federal Highway Research Institute).
 Help users explore and act on German highway traffic data covering H1 2025 (Jan–Jun 2025) AND H1 2026 (Jan–Jun 2026).

@@ -438,8 +438,8 @@ const PURPLE_SHADES = [
 
 // ── Overview ──────────────────────────────────────────
 async function loadOverview() {
- const [d_base, states] = await Promise.all([_prefetch.overview, _prefetch.states]);
- const d = { ...d_base, states };
+ const [d_base, stateData] = await Promise.all([_prefetch.overview, _prefetch.states]);
+ const d = { ...d_base, states: stateData };
  // API returns total_kfz; normalise to kfz_total for chart compatibility
  (d.top10_stations || []).forEach(s => { s.kfz_total = s.total_kfz; });
  (d.states || []).forEach(s => { s.kfz_total = s.total_kfz; });

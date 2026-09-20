@@ -802,18 +802,18 @@ function getStations() {
   return _stationsPromise;
 }
 
-loadOverview().catch(console.error);
-loadStations().catch(console.error);
-loadHourlyPattern('2026-06').catch(console.error);
-
 // ── Pre-fetch slow endpoints in parallel at page load ─────────────────
-// Data is cached server-side for 1 hour. Starting fetches immediately means
-// results are ready (or nearly so) by the time the user scrolls to each section.
+// Must be declared before loadOverview() / loadYoY() which await these promises.
+// Data is cached server-side for 1 hour; subsequent requests return in <1ms.
 const _prefetch = {
   yoy:      fetch(`${API_BASE}/api/traffic/yoy`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
   overview: fetch(`${API_BASE}/api/traffic/overview`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
   states:   fetch(`${API_BASE}/api/traffic/states`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
 };
+
+loadOverview().catch(console.error);
+loadStations().catch(console.error);
+loadHourlyPattern('2026-06').catch(console.error);
 
 // ── YoY: render on scroll, but data is already in-flight ──────────────
 let _yoyLoaded = false;

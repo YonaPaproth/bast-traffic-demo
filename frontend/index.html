@@ -7,7 +7,122 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<link rel="preconnect" href="https://d1905gj4v53w41.cloudfront.net">
+<link rel="dns-prefetch" href="https://cdn.plot.ly">
+<script>
+// ── Data bootstrap ────────────────────────────────────────────────────────
+// This runs before the Plotly <script> below. Plotly is 3.6 MB; while its tag
+// was render-blocking and sat above this code, not a single API request began
+// until the whole bundle had downloaded (~1.4s), and only then did the page
+// start waiting on the backend. Firing the requests here overlaps the two.
+const API_BASE = 'https://d1905gj4v53w41.cloudfront.net';
+
+// Frontend defaults — the backend cache warmer pre-computes exactly these,
+// so keep them in sync with _WARM_DEFAULT_* in api/main.py.
+const HOURLY_DEFAULT_STATION = 'NW5048';
+const HOURLY_DEFAULT_DATE    = '2026-06-15';
+const PATTERN_DEFAULT_MONTH  = '2026-06';
+
+// Retry only analytics GET requests; agent requests may create proposals.
+async function fetchAnalytics(url) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      if (!response.ok) {
+        const error = new Error('Data request failed (HTTP ' + response.status + ').');
+        error.retryable = [502, 503, 504].includes(response.status);
+        throw error;
+      }
+      return await response.json();
+    } catch (error) {
+      const networkFailure = error.name === 'TypeError' || error.name === 'AbortError';
+      if (attempt === 1 || !(networkFailure || error.retryable)) {
+        if (error.name === 'AbortError') throw new Error('The data request timed out.');
+        if (networkFailure) throw new Error('The data service could not be reached.');
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+}
+
+// Every request the initial view needs, all in flight at once. Previously
+// /api/stations ran before /api/traffic/hourly could start, and the two
+// hourly-pattern calls waited on a function that only ran after Plotly loaded.
+const _prefetch = {
+  overview: fetchAnalytics(`${API_BASE}/api/traffic/overview`),
+  states:   fetchAnalytics(`${API_BASE}/api/traffic/states`),
+  yoy:      fetchAnalytics(`${API_BASE}/api/traffic/yoy`),
+};
+
+// Stations feed both the hourly-profile dropdown and the map; fetched once.
+let _stationsPromise = null;
+function getStations() {
+  if (!_stationsPromise) {
+    _stationsPromise = fetchAnalytics(`${API_BASE}/api/stations`)
+      .then(data => {
+        if (!Array.isArray(data)) throw new Error('Invalid station data received.');
+        if (!data.length) throw new Error('No stations are available.');
+        return data;
+      }).catch(error => {
+        _stationsPromise = null;  // let Retry re-issue the request
+        throw error;
+      });
+  }
+  return _stationsPromise;
+}
+
+// Hourly profile for one station/day, cached per key so re-selecting a
+// station you already looked at is instant.
+const _hourlyCache = {};
+function getHourly(stationId, date) {
+  const key = `${stationId}|${date}`;
+  if (!_hourlyCache[key]) {
+    _hourlyCache[key] = fetchAnalytics(
+      `${API_BASE}/api/traffic/hourly?station_id=${encodeURIComponent(stationId)}&date=${date}`
+    ).catch(error => { delete _hourlyCache[key]; throw error; });
+  }
+  return _hourlyCache[key];
+}
+
+// Average daily pattern: 2026 month + its 2025 counterpart, cached per month
+// so the month dropdown switches without a round trip the second time.
+const _patternCache = {};
+function getPattern(month) {
+  if (!_patternCache[month]) {
+    const mm = month.split('-')[1];
+    _patternCache[month] = Promise.all([
+      fetchAnalytics(`${API_BASE}/api/traffic/hourly-pattern?month=${month}`),
+      fetch(`${API_BASE}/api/traffic/hourly-pattern?month=2025-${mm}`)
+        .then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).catch(error => { delete _patternCache[month]; throw error; });
+  }
+  return _patternCache[month];
+}
+
+// Kick off the remaining initial-view requests now.
+getStations();
+getHourly(HOURLY_DEFAULT_STATION, HOURLY_DEFAULT_DATE);
+getPattern(PATTERN_DEFAULT_MONTH);
+
+// Nothing has attached a .catch() yet; absorb early rejections so a slow or
+// failing backend does not spray unhandled-rejection noise into the console.
+[_prefetch.overview, _prefetch.states, _prefetch.yoy,
+ _stationsPromise, _hourlyCache[`${HOURLY_DEFAULT_STATION}|${HOURLY_DEFAULT_DATE}`],
+ _patternCache[PATTERN_DEFAULT_MONTH]].forEach(p => p && p.catch(() => {}));
+
+// Plotly is now deferred, so it is not guaranteed to exist when a fast
+// (server-cached) response comes back. Every render site awaits this.
+const _plotlyReady = new Promise(resolve => {
+  if (window.Plotly) resolve();
+  else document.addEventListener('DOMContentLoaded', () => resolve());
+});
+</script>
+<script defer src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
  tailwind.config = {
@@ -385,7 +500,27 @@
 
 <script>
 const BASE = 'https://bast-traffic-demo-112220711619.s3.eu-central-1.amazonaws.com/data';
-const API_BASE = 'https://d1905gj4v53w41.cloudfront.net';
+// API_BASE, fetchAnalytics, _prefetch, getStations, getHourly, getPattern and
+// _plotlyReady are defined in the bootstrap <script> in <head> so the requests
+// start before Plotly downloads.
+
+function showDataError(id, error, retry) {
+  const target = document.getElementById(id);
+  target.replaceChildren();
+  const message = document.createElement('p');
+  message.style.cssText = 'padding:24px 24px 8px;text-align:center;color:#666;font-size:13px;';
+  message.textContent = error.message || 'Data temporarily unavailable.';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = 'Retry';
+  button.style.cssText = 'display:block;margin:0 auto 24px;padding:8px 18px;cursor:pointer;';
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    message.textContent = 'Loading data…';
+    Promise.resolve().then(retry).catch(nextError => showDataError(id, nextError, retry));
+  });
+  target.append(message, button);
+}
 
 // ── Plotly base layout (light theme) ─────────────────
 const LAYOUT_BASE = {
@@ -465,6 +600,8 @@ async function loadOverview() {
  kpiCard(fmt(wdayAvg), 'Avg. Weekday Traffic', 'Monday – Friday'),
  kpiCard(fmt(weAvg), 'Avg. Weekend Traffic', 'Saturday + Sunday'),
  ].join('');
+
+ await _plotlyReady;
 
  // Daily area chart — KFZ + SV overlaid lines aligned on Jan-Jun axis
  const alignDay = s => '2000-' + s.slice(5); // strip year so both lines share x-axis
@@ -570,25 +707,42 @@ async function loadOverview() {
 
 // ── Stations dropdown ─────────────────────────────────
 async function loadStations() {
- const d = await getStations();
  const sel = document.getElementById('station-select');
- sel.innerHTML = d.map(s =>
- `<option value="${s.station_id}">${s.station_name || s.station_id} · ${s.state || '?'} · ${s.road_class || ''}${s.road_number || ''}</option>`
- ).join('');
- sel.addEventListener('change', () => loadHourly(sel.value));
- const dateInput = document.getElementById('hourly-date');
- if (dateInput) dateInput.addEventListener('change', () => loadHourly(sel.value));
- if (d.length) {
-   const preferred = d.find(s => s.station_id === 'NW5048') || d[0];
+ sel.disabled = true;
+ sel.innerHTML = '<option>Loading stations…</option>';
+ try {
+   const d = await getStations();
+   if (!d.length) throw new Error('No stations are available.');
+   sel.innerHTML = d.map(s =>
+     `<option value="${s.station_id}">${s.station_name || s.station_id} · ${s.state || '?'} · ${s.road_class || ''}${s.road_number || ''}</option>`
+   ).join('');
+   sel.onchange = () => loadHourly(sel.value);
+   const dateInput = document.getElementById('hourly-date');
+   if (dateInput) dateInput.onchange = () => loadHourly(sel.value);
+   const preferred = d.find(s => s.station_id === HOURLY_DEFAULT_STATION) || d[0];
    sel.value = preferred.station_id;
-   loadHourly(preferred.station_id);
+   sel.disabled = false;
+   // The chart for the default station is already loading in parallel — only
+   // re-request if the station list does not contain it. Chaining the chart
+   // behind this request used to cost a full extra round trip on every load.
+   if (preferred.station_id !== HOURLY_DEFAULT_STATION) {
+     await loadHourly(preferred.station_id);
+   }
+ } catch (error) {
+   sel.innerHTML = '<option>Stations unavailable</option>';
+   showDataError('chart-hourly', error, loadStations);
  }
 }
 
 // ── Hourly profile ────────────────────────────────────
+// Renders are sequenced: this chart no longer loads strictly after the station
+// list, so a slow earlier request must not overwrite a newer one.
+let _hourlySeq = 0;
+
 async function loadHourly(stationId) {
+  const seq = ++_hourlySeq;
   const dateInput = document.getElementById('hourly-date');
-  const date = dateInput ? dateInput.value : '2026-01-15';
+  const date = dateInput ? dateInput.value : HOURLY_DEFAULT_DATE;
 
   // Replace div so Plotly has zero prior axis state to inherit
   const _old = document.getElementById('chart-hourly');
@@ -598,9 +752,9 @@ async function loadHourly(stationId) {
   _old.parentNode.replaceChild(_new, _old);
 
   try {
-    const resp = await fetch(`${API_BASE}/api/traffic/hourly?station_id=${stationId}&date=${date}`);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const payload = await resp.json();
+    const payload = await getHourly(stationId, date);
+    await _plotlyReady;
+    if (seq !== _hourlySeq) return;  // a newer request superseded this one
 
     // Support both old (array) and new (object with rows) response shape
     const rows = Array.isArray(payload) ? payload : (payload.rows || []);
@@ -688,6 +842,7 @@ async function loadHourly(stationId) {
       hoverlabel: LAYOUT_BASE.hoverlabel,
     }, { responsive: true, displayModeBar: false });
   } catch(e) {
+    if (seq !== _hourlySeq) return;  // a newer request superseded this one
     document.getElementById('chart-hourly').innerHTML =
       '<div style="display:flex;align-items:center;justify-content:center;height:320px;color:#505050;font-size:13px;">No data for this station and date.</div>';
   }
@@ -709,12 +864,9 @@ async function loadHourlyPattern(month) {
   document.getElementById('pattern-subtitle').textContent =
     `${label2026} vs ${label2025} · Average across all 1,943 counting stations`;
   try {
-    // Fetch both years in parallel; 2025 falls back to [] if not available
-    const [rows2026, rows2025] = await Promise.all([
-      fetch(`${API_BASE}/api/traffic/hourly-pattern?month=${month}`).then(r => r.json()),
-      fetch(`${API_BASE}/api/traffic/hourly-pattern?month=${month2025}`)
-        .then(r => r.ok ? r.json() : []).catch(() => []),
-    ]);
+    // Both years in parallel; 2025 falls back to [] if not available. For the
+    // default month this promise was created in <head> and is already resolved.
+    const [rows2026, rows2025] = await getPattern(month);
 
     // BASt hours are 1-24 (hour 1 = 00:00-01:00, hour 24 = 23:00-00:00)
     const hours = Array.from({length: 24}, (_, h) => h);
@@ -736,6 +888,8 @@ async function loadHourlyPattern(month) {
       const r = Math.round(161 + (80 - 161) * t);
       return `rgba(${r},0,255,${0.35 + 0.65 * t})`;
     });
+
+    await _plotlyReady;
 
     // Replace the div entirely so Plotly has zero prior state to inherit
     const _oldDiv = document.getElementById('chart-pattern');
@@ -788,32 +942,16 @@ async function loadHourlyPattern(month) {
       xaxis: { ...LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10, color: '#505050' } },
     }, { responsive: true, displayModeBar: false });
   } catch(e) {
-    document.getElementById('chart-pattern').innerHTML =
-      '<div style="padding:40px;text-align:center;color:#888;font-size:13px;">Failed to load data.</div>';
+    showDataError('chart-pattern', e, () => loadHourlyPattern(month));
   }
 }
 
-// ── Shared stations cache ─────────────────────────────
-let _stationsPromise = null;
-function getStations() {
-  if (!_stationsPromise) {
-    _stationsPromise = fetch(`${API_BASE}/api/stations`).then(r => r.json());
-  }
-  return _stationsPromise;
-}
-
-// ── Pre-fetch slow endpoints in parallel at page load ─────────────────
-// Must be declared before loadOverview() / loadYoY() which await these promises.
-// Data is cached server-side for 1 hour; subsequent requests return in <1ms.
-const _prefetch = {
-  yoy:      fetch(`${API_BASE}/api/traffic/yoy`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-  overview: fetch(`${API_BASE}/api/traffic/overview`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-  states:   fetch(`${API_BASE}/api/traffic/states`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
-};
-
+// All three render from promises already in flight since <head>, so they run
+// concurrently rather than queueing behind each other.
 loadOverview().catch(console.error);
 loadStations().catch(console.error);
-loadHourlyPattern('2026-06').catch(console.error);
+loadHourly(HOURLY_DEFAULT_STATION).catch(console.error);
+loadHourlyPattern(PATTERN_DEFAULT_MONTH).catch(console.error);
 
 // ── YoY: render on scroll, but data is already in-flight ──────────────
 let _yoyLoaded = false;
@@ -881,6 +1019,7 @@ async function loadMap() {
  },
  };
 
+ await _plotlyReady;
  Plotly.newPlot('map-chart', [trace], layout, { responsive: true, displayModeBar: false });
 }
 
@@ -1245,6 +1384,7 @@ async function sendChat() {
 
   let fullText = '';
   let lastToolName = '';
+  let streamCompleted = false;
 
   try {
     const resp = await fetch(`${API_BASE}/api/ask?q=${encodeURIComponent(question)}`);
@@ -1277,6 +1417,7 @@ async function sendChat() {
           } else if (evt.type === 'tool_running') {
             aDiv.textContent = (fullText || '') + '\n\n' + _toolLabel(lastToolName, evt.query || '');
           } else if (evt.type === 'done') {
+            streamCompleted = true;
             // Refresh actions panel silently — agent may have created a proposal
             if (document.getElementById('actions-panel').style.display === 'flex') {
               loadActions();
@@ -1302,9 +1443,14 @@ async function sendChat() {
         } catch (_) {}
       }
     }
+    if (!streamCompleted) throw new Error('The response stream ended before completion.');
     aDiv.textContent = fullText || '(no response)';
   } catch (e) {
-    aDiv.textContent = 'Error: ' + e.message;
+    console.error('Agent request failed:', e);
+    const detail = /^HTTP \d+$/.test(e.message) ? ' (' + e.message + ')' : '';
+    aDiv.textContent = (fullText ? fullText + '\n\n' : '') +
+      'Connection interrupted' + detail + '. This response may be incomplete. ' +
+      'Your request was not automatically resent; check Actions before resubmitting a request that could create a proposal.';
   }
 
   input.disabled = false;

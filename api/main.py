@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 import os
 import json
+import threading
 import time as _time
 
 import boto3
@@ -87,8 +88,17 @@ app.add_middleware(
 )
 
 
-def get_con() -> duckdb.DuckDBPyConnection:
-    """Return a DuckDB connection configured for local or S3 access."""
+# One process-wide DuckDB database. Each request gets a cursor() on it, which
+# is thread-safe and — crucially — shares the parent's Parquet footer and HTTP
+# metadata caches. Building a fresh :memory: connection per request threw those
+# caches away, so every query re-read the Iceberg manifest and every Parquet
+# footer from S3 before it could do any actual work.
+_DB: Optional[duckdb.DuckDBPyConnection] = None
+_DB_LOCK = threading.Lock()
+
+
+def _build_db() -> duckdb.DuckDBPyConnection:
+    """Create and configure the shared DuckDB database."""
     con = duckdb.connect(database=":memory:")
     if USE_S3:
         con.execute("LOAD httpfs")
@@ -106,7 +116,39 @@ def get_con() -> duckdb.DuckDBPyConnection:
         except Exception:
             con.execute(f"SET s3_region='{AWS_REGION}'")
             con.execute("SET s3_use_credential_chain=true")
+
+    # Keep Parquet footers / row-group stats and S3 HEAD responses between
+    # queries. Harmless no-ops on DuckDB builds that lack a given setting.
+    for stmt in ("SET enable_object_cache=true",
+                 "SET enable_http_metadata_cache=true"):
+        try:
+            con.execute(stmt)
+        except Exception:
+            pass
+
+    # The Fargate task is 0.5 vCPU, but DuckDB sizes its thread pool to the
+    # *host* core count and thrashes. Opt in via env rather than guessing.
+    threads = os.getenv("DUCKDB_THREADS")
+    if threads:
+        try:
+            con.execute(f"SET threads={int(threads)}")
+        except Exception:
+            pass
     return con
+
+
+def get_con() -> duckdb.DuckDBPyConnection:
+    """Return a per-request cursor on the shared DuckDB database.
+
+    Callers still call .close() on it; closing a cursor leaves the parent
+    database — and its caches — intact.
+    """
+    global _DB
+    if _DB is None:
+        with _DB_LOCK:
+            if _DB is None:
+                _DB = _build_db()
+    return _DB.cursor()
 
 
 def parquet_source() -> str:
@@ -122,16 +164,30 @@ def parquet_source() -> str:
 # so a 1-hour TTL is safe. Cache resets on container restart / redeploy.
 _RESPONSE_CACHE: dict[str, tuple[float, object]] = {}
 _CACHE_TTL = 3600  # seconds
+# Bounded: /api/traffic/hourly keys on station_id+date, so the key space is
+# user-driven and would otherwise grow without limit.
+_CACHE_MAX_ENTRIES = 512
+_CACHE_LOCK = threading.Lock()
 
 
 def _cached(key: str, fn, ttl: int = _CACHE_TTL):
     now = _time.monotonic()
-    if key in _RESPONSE_CACHE:
-        ts, val = _RESPONSE_CACHE[key]
-        if now - ts < ttl:
-            return val
+    with _CACHE_LOCK:
+        hit = _RESPONSE_CACHE.get(key)
+    if hit is not None and now - hit[0] < ttl:
+        return hit[1]
+
     val = fn()
-    _RESPONSE_CACHE[key] = (now, val)
+
+    with _CACHE_LOCK:
+        if len(_RESPONSE_CACHE) >= _CACHE_MAX_ENTRIES:
+            # Evict the oldest quarter rather than clearing the whole cache,
+            # so a burst of one-off station lookups cannot cost us the
+            # expensive page-load entries.
+            stale = sorted(_RESPONSE_CACHE, key=lambda k: _RESPONSE_CACHE[k][0])
+            for k in stale[: _CACHE_MAX_ENTRIES // 4]:
+                _RESPONSE_CACHE.pop(k, None)
+        _RESPONSE_CACHE[key] = (now, val)
     return val
 
 
@@ -148,7 +204,14 @@ def get_stations():
 
     Filters to January 2026 so total_kfz values are comparable month-to-month
     and Iceberg partition pruning limits the scan to one partition file.
+
+    Station metadata changes only when new Parquet is published, so the whole
+    response is cached — this was a ~6s uncached query on every page load.
     """
+    return _cached("stations", _compute_stations)
+
+
+def _compute_stations():
     con = get_con()
     try:
         df = con.execute(f"""
@@ -235,6 +298,11 @@ def get_traffic_hourly(
     if not _DATE_RE.match(date):
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD.")
 
+    return _cached(f"hourly:{station_id.upper()}:{date}",
+                   lambda: _compute_hourly(station_id, date))
+
+
+def _compute_hourly(station_id: str, date: str):
     # 2026-01 Parquet has old schema: kfz_r2 is wrong, sv_r1/pkw_r1 absent.
     is_2026_jan = date.startswith("2026-01")
     r2_expr = "NULL" if is_2026_jan else "SUM(kfz_r2)"
@@ -372,6 +440,11 @@ def get_hourly_pattern(
         int(year); int(mon)
     except Exception:
         raise HTTPException(status_code=400, detail="month must be YYYY-MM")
+    return _cached(f"pattern:{int(year)}-{int(mon):02d}",
+                   lambda: _compute_hourly_pattern(int(year), int(mon), month))
+
+
+def _compute_hourly_pattern(year: int, mon: int, month: str):
     con = get_con()
     try:
         df = con.execute(f"""
@@ -379,8 +452,8 @@ def get_hourly_pattern(
                 hour,
                 ROUND(AVG(kfz_total), 0) AS avg_kfz
             FROM {parquet_source()}
-            WHERE YEAR(date::DATE) = {int(year)}
-              AND MONTH(date::DATE) = {int(mon)}
+            WHERE YEAR(date::DATE) = {year}
+              AND MONTH(date::DATE) = {mon}
             GROUP BY hour
             ORDER BY hour
         """).df()
@@ -1039,3 +1112,97 @@ def iceberg_snapshots():
         return {"table": "bast.traffic", "snapshots": snapshots}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Cache-Control for analytics reads ─────────────────────────────────────────
+# These endpoints are pure reads over data that only changes when new Parquet
+# is published. Letting the browser (and CloudFront, once its behaviour uses a
+# caching policy instead of CachingDisabled) hold them removes the request
+# entirely on repeat views. /api/ask and /api/actions are deliberately excluded:
+# the first is a stream, the second is mutable state.
+_CACHEABLE_PREFIXES = (
+    "/api/stations",
+    "/api/traffic/",
+    "/api/iceberg/",
+)
+
+
+@app.middleware("http")
+async def _add_cache_headers(request, call_next):
+    response = await call_next(request)
+    if (
+        request.method == "GET"
+        and response.status_code == 200
+        and request.url.path.startswith(_CACHEABLE_PREFIXES)
+    ):
+        response.headers["Cache-Control"] = (
+            "public, max-age=300, stale-while-revalidate=3600"
+        )
+    return response
+
+
+# ── Startup cache warming ─────────────────────────────────────────────────────
+# Without this, the first visitor after a deploy pays the full cold-scan cost
+# for every panel on the page (tens of seconds on a 0.5 vCPU task). The warmer
+# runs in a daemon thread so it never delays uvicorn's startup or the ECS
+# health check; requests arriving mid-warm still work, just at the old speed.
+#
+# Ordered by where it appears on the page, so the above-the-fold panels are
+# ready first. The hourly profile defaults to NW5048 in the frontend — keep
+# these two in sync.
+# Must match the frontend defaults in index.html: the #station-select
+# preferred station and the #hourly-date input value.
+_WARM_DEFAULT_STATION = "NW5048"
+_WARM_DEFAULT_DATE = "2026-06-15"
+_WARM_MONTHS = [
+    ("2026-06", "2025-06"), ("2026-05", "2025-05"), ("2026-04", "2025-04"),
+    ("2026-03", "2025-03"), ("2026-02", "2025-02"), ("2026-01", "2025-01"),
+]
+
+
+def _warm_cache() -> None:
+    import logging
+
+    log = logging.getLogger("uvicorn.error")
+
+    def step(label, fn):
+        start = _time.monotonic()
+        try:
+            fn()
+            log.info("warm: %s ready in %.1fs", label, _time.monotonic() - start)
+        except Exception as exc:  # a cold-start warm failure must not kill the app
+            log.warning("warm: %s failed (%s)", label, exc)
+
+    step("overview", lambda: _cached("overview", _compute_overview))
+    step("states", lambda: _cached("states", _compute_states))
+    step("stations", lambda: _cached("stations", _compute_stations))
+
+    # Default hourly profile: the chart the page renders before any interaction.
+    step(
+        "hourly:default",
+        lambda: _cached(
+            f"hourly:{_WARM_DEFAULT_STATION}:{_WARM_DEFAULT_DATE}",
+            lambda: _compute_hourly(_WARM_DEFAULT_STATION, _WARM_DEFAULT_DATE),
+        ),
+    )
+
+    step("yoy", lambda: _cached("yoy", _compute_yoy))
+
+    # Every month behind the Average Daily Pattern dropdown, both years, so
+    # switching months during a demo is instant rather than a 5s stall.
+    for m26, m25 in _WARM_MONTHS:
+        for month in (m26, m25):
+            year, mon = month.split("-")
+            step(
+                f"pattern:{month}",
+                lambda y=int(year), mo=int(mon), mn=month: _cached(
+                    f"pattern:{y}-{mo:02d}",
+                    lambda: _compute_hourly_pattern(y, mo, mn),
+                ),
+            )
+
+    log.info("warm: cache warming complete")
+
+
+if os.getenv("WARM_CACHE_ON_START", "1") != "0":
+    threading.Thread(target=_warm_cache, name="cache-warmer", daemon=True).start()
